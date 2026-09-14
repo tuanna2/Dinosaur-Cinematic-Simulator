@@ -1,0 +1,53 @@
+name: Pipeline CI
+
+on:
+  push:
+    branches:
+      - main
+      - "feat/**"
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Validate sample scenario
+        run: python pipeline/validate_scenario.py scenarios/raptor_hunt_001/scenario.json
+
+      - name: Compile sample execution plan
+        run: |
+          python pipeline/compile_execution_plan.py \
+            scenarios/raptor_hunt_001/scenario.json \
+            --output /tmp/raptor_hunt_execution_plan.json
+          python -m json.tool /tmp/raptor_hunt_execution_plan.json > /dev/null
+
+      - name: Verify expected bootstrap asset gaps
+        shell: bash
+        run: |
+          set +e
+          python pipeline/preflight.py scenarios/raptor_hunt_001/scenario.json --out-dir /tmp/preflight
+          status=$?
+          set -e
+          if [ "$status" -ne 1 ]; then
+            echo "Expected bootstrap preflight to return 1 for missing assets, got $status"
+            exit 1
+          fi
+          python pipeline/build_agent_requests.py \
+            /tmp/preflight/raptor_hunt_001/preflight.json \
+            --output /tmp/preflight/raptor_hunt_001/agent_requests.json
+          python -m json.tool /tmp/preflight/raptor_hunt_001/agent_requests.json > /dev/null
