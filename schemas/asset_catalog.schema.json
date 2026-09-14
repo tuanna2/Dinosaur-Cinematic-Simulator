@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/dinosaur-cinematic-simulator/asset_catalog.schema.json",
+  "title": "Dinosaur Cinematic Asset Catalog",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "blender_version", "assets"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "blender_version": {"type": "string", "minLength": 1},
+    "unreal_version": {"type": "string", "minLength": 1},
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "type", "status"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9_-]+$"},
+          "type": {
+            "type": "string",
+            "enum": ["dinosaur", "environment", "prop", "animation", "camera_preset", "weather_preset", "material", "audio"]
+          },
+          "status": {"type": "string", "enum": ["planned", "draft", "approved", "deprecated"]},
+          "blender_source": {"type": "string"},
+          "export_path": {"type": "string"},
+          "unreal_path": {"type": "string"},
+          "skeleton_id": {"type": "string"},
+          "species": {"type": "string"},
+          "notes": {"type": "string"}
+        }
+      }
+    }
+  }
+}
