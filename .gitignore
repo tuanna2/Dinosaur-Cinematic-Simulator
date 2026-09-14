@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Deterministic pipeline outputs
+build/
+
+# Blender
+*.blend1
+*.blend2
+*.blend@
+*.blend~
+*.autosave
+
+# Unreal Engine
+Binaries/
+Build/
+DerivedDataCache/
+Intermediate/
+Saved/
+.vs/
+*.VC.db
+*.opensdf
+*.sdf
+*.sln
+*.suo
+*.xcodeproj
+*.xcworkspace
+
+# Render outputs
+renders/
+frames/
+*.exr
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
