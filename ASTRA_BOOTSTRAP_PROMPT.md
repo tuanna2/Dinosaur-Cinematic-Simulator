@@ -8,13 +8,20 @@ You are the bootstrap implementation agent for `Dinosaur-Cinematic-Simulator`.
 
 Read these files first and follow them as contracts:
 
+- `AGENTS.md`
 - `docs/ARCHITECTURE.md`
+- `docs/PRODUCTION_WORKFLOW.md`
+- `docs/UNREAL_EXECUTION_CONTRACT.md`
 - `agents/director.md`
 - `agents/asset-designer.md`
+- `agents/animation-director.md`
+- `agents/camera-director.md`
+- `agents/environment-designer.md`
 - `agents/visual-critic.md`
 - `knowledge/dinosaur-behavior.md`
 - `knowledge/cinematic-language.md`
 - `schemas/scenario.schema.json`
+- `schemas/asset_catalog.schema.json`
 - `config/asset_catalog.json`
 - `scenarios/raptor_hunt_001/scenario.json`
 
@@ -24,6 +31,19 @@ Local environment:
 - Unreal Engine: detect the installed UE5 version and use it; document the exact version in the repo.
 - Do not replace deterministic pipeline steps with LLM calls.
 
+## Before changing Unreal or Blender
+
+From the repository root run:
+
+```bash
+python3 -m unittest discover -s tests -v
+python3 pipeline/preflight.py scenarios/raptor_hunt_001/scenario.json
+```
+
+The initial preflight is expected to report `missing_assets` because the master asset library has not been bootstrapped yet.
+
+The Unreal runtime must consume the compiled `execution_plan.json` contract instead of asking an LLM to reinterpret story prose or scenario JSON at runtime.
+
 ## Objective
 
 Bootstrap a reusable cinematic dinosaur simulator whose first executable vertical slice is `raptor_hunt_001`.
@@ -32,7 +52,11 @@ The simulator is primarily a video-production engine, not a park-management game
 
 ## Work in this order
 
-### 1. Unreal project
+### 1. Detect and document Unreal
+
+Detect the actual installed Unreal Engine 5 version before creating version-sensitive source files. Record the exact version and platform in the repository setup documentation.
+
+### 2. Unreal project
 
 Create the Unreal project under `unreal/DinosaurCinematicSimulator/`.
 
@@ -47,41 +71,65 @@ Enable/configure the minimum required UE plugins/features for:
 
 Do not enable unrelated plugins.
 
-### 2. Director runtime/API
+### 3. Director runtime/API
 
-Implement a deterministic scenario executor that can consume the repository scenario format.
+Implement `docs/UNREAL_EXECUTION_CONTRACT.md`.
 
-It must support at least:
+The production path is:
 
-- load scenario JSON
-- load environment by asset ID
-- spawn actor groups by asset ID and count
-- actor lookup by scenario actor ID
-- set weather preset
-- set time-of-day preset
-- apply camera preset
-- execute basic actions
-- play named animation clips
+```text
+scenario.json
+  -> pipeline/preflight.py
+  -> execution_plan.json
+  -> Unreal deterministic executor
+```
+
+Unreal must support at least:
+
+- consume compiled execution plans
+- load environment by logical asset ID
+- spawn all compiled actor instances by logical asset ID
+- stable actor lookup by `instance_id`
+- set registered weather/time presets
+- apply registered camera presets
+- execute registered action mappings
+- play named animation assets
 - build or populate a Level Sequence
-- render a low-resolution preview
+- render predictable low-resolution previews
 - invoke Movie Render Queue for final render
+- return machine-readable errors for unresolved/unsupported operations
 
 Prefer C++ for stable runtime/core types and Python/Editor scripting for editor automation where it simplifies Sequencer/MRQ generation. Blueprints may be used for content-facing configuration, but do not make the entire pipeline manual Blueprint wiring.
 
-### 3. Asset registry bridge
+### 4. Asset registry bridge
 
-Extend `config/asset_catalog.json` with Unreal paths and Blender source paths.
+Implement deterministic lookup from logical IDs in `config/asset_catalog.json` to Unreal/Blender paths.
 
-Create deterministic lookup code so the scenario uses logical IDs such as:
+Logical IDs include:
 
 - `dino_trex_master`
 - `dino_velociraptor_master`
 - `dino_triceratops_master`
 - `env_tropical_rainforest`
+- `anim_*` IDs required by the example scenario
 
-The scenario must never depend directly on random generated filenames.
+The scenario and execution plan must never depend directly on random generated filenames.
 
-### 4. Bootstrap assets in Blender 5.2.1
+Do not casually edit catalog entries by hand. After an asset is actually created/imported and verified, register it with `pipeline/register_asset.py`, for example:
+
+```bash
+python3 pipeline/register_asset.py dino_trex_master \
+  --type dinosaur \
+  --status approved \
+  --blender-source blender/dinosaurs/trex/trex_master.blend \
+  --export-path staging/dinosaurs/trex_master.glb \
+  --unreal-path /Game/Dinosaurs/TRex/SK_TRex_Master \
+  --species tyrannosaurus_rex
+```
+
+Use `--replace` only for an intentional update of an existing logical asset.
+
+### 5. Bootstrap assets in Blender 5.2.1
 
 Because the catalog is initially empty, create the first reusable master assets needed by `raptor_hunt_001`:
 
@@ -98,7 +146,7 @@ Use Blender Python (`bpy`) for repeatable operations where practical. Preserve `
 
 Do not repeatedly regenerate a dinosaur from scratch. Once a usable master exists, iterate that master.
 
-### 5. Environment
+### 6. Environment
 
 Create a tropical rainforest vertical-slice environment with:
 
@@ -111,7 +159,7 @@ Create a tropical rainforest vertical-slice environment with:
 
 Use reusable vegetation/rock modules and UE PCG where appropriate. Optimize for cinematic framing and reasonable preview performance.
 
-### 6. Dinosaur behavior
+### 7. Dinosaur behavior
 
 Implement only enough autonomous behavior for the vertical slice:
 
@@ -125,9 +173,9 @@ Implement only enough autonomous behavior for the vertical slice:
 
 The scenario/director must be able to override autonomous behavior for deterministic cinematic shots.
 
-### 7. Cameras and Sequencer
+### 8. Cameras and Sequencer
 
-Implement all camera presets currently referenced in `knowledge/cinematic-language.md` and the example scenario, including:
+Implement the initial registered camera presets required by `docs/UNREAL_EXECUTION_CONTRACT.md` and the example scenario:
 
 - aerial_establishing
 - static_hide
@@ -136,39 +184,60 @@ Implement all camera presets currently referenced in `knowledge/cinematic-langua
 - wide_observational
 - long_lens_observation
 
-Generate a Level Sequence for `raptor_hunt_001` from JSON rather than hand-authoring the full timeline.
+Generate a Level Sequence from `execution_plan.json`; do not hand-author the full scenario timeline.
 
-### 8. Preview and visual QA hooks
+### 9. Preview and visual QA hooks
 
 Provide a command or documented procedure that:
 
-1. validates the scenario
-2. resolves assets
-3. opens/builds the Unreal scenario
+1. runs deterministic preflight
+2. refuses to render if required assets/presets remain unresolved
+3. builds/opens the Unreal scenario from the compiled execution plan
 4. renders representative preview frames or a low-resolution preview
-5. writes outputs to a predictable directory such as `outputs/<scenario_id>/preview/`
+5. writes outputs to predictable scenario-specific paths
+
+Recommended layout:
+
+```text
+build/<scenario_id>/
+  execution_plan.json
+  preview/
+    shot_001.png
+    shot_002.png
+    ...
+```
 
 Prepare a machine-readable place for visual-critic patches, but do not require an AI call for normal execution.
 
-### 9. Final render
+### 10. Final render
 
-Configure Movie Render Queue for the scenario render settings. For the example scenario target 3840x2160 at 60 fps for final output, while preview uses the `preview_scale` setting.
+Configure Movie Render Queue for the scenario render settings. For the example scenario target 3840x2160 at 60 fps for final output, while preview uses the scenario `preview_scale` setting.
 
-### 10. Documentation and verification
+### 11. Close the bootstrap gaps
 
-Add:
+After creating/importing/registering the masters and required animations, rerun:
+
+```bash
+python3 pipeline/preflight.py scenarios/raptor_hunt_001/scenario.json
+```
+
+The bootstrap asset phase is not complete until preflight reports `ready`.
+
+### 12. Documentation and verification
+
+Add/update:
 
 - exact local prerequisites
 - Unreal version used
 - Blender/Unreal asset import conventions
-- how to run the validator
-- how to resolve assets
+- how to run preflight
+- how to register assets
 - how to build/open the Unreal project
 - how to execute `raptor_hunt_001`
 - how to render preview
 - how to render final
 
-Run every deterministic validation/test you can run locally. Do not claim Blender/Unreal steps succeeded unless you actually executed them.
+Run every deterministic validation/test you can run locally. Actually open/run Blender and Unreal for their respective verification steps. Do not claim Blender/Unreal steps succeeded unless you executed them.
 
 ## Important architecture rule
 
@@ -176,4 +245,4 @@ If a step can be reproduced exactly with code/config, implement it as code/confi
 
 ## Completion criteria
 
-The bootstrap is complete when a fresh clone on the configured workstation can follow documented steps to execute `raptor_hunt_001`, resolve all required logical asset IDs, generate its Unreal sequence and produce a preview render without manually rebuilding the scene shot-by-shot.
+The bootstrap is complete when a fresh clone on the configured workstation can run deterministic preflight, resolve all required logical asset IDs, feed the compiled execution plan to Unreal, generate the `raptor_hunt_001` Level Sequence, and produce a preview render without manually rebuilding the scene shot-by-shot.
