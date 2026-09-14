@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.local/dinosaur-cinematic-simulator/scenario.schema.json",
+  "title": "Dinosaur Cinematic Scenario",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "scenario_id", "title", "duration_seconds", "style", "environment", "actors", "shots", "render"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "scenario_id": {"type": "string", "pattern": "^[a-z0-9_-]+$"},
+    "title": {"type": "string", "minLength": 1},
+    "duration_seconds": {"type": "number", "exclusiveMinimum": 0},
+    "style": {"type": "string", "minLength": 1},
+    "environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["asset_id", "weather", "time_of_day"],
+      "properties": {
+        "asset_id": {"type": "string"},
+        "weather": {"type": "string"},
+        "time_of_day": {"type": "string"}
+      }
+    },
+    "actors": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "asset_id", "species", "count"],
+        "properties": {
+          "id": {"type": "string"},
+          "asset_id": {"type": "string"},
+          "species": {"type": "string"},
+          "count": {"type": "integer", "minimum": 1},
+          "variant": {"type": "string"}
+        }
+      }
+    },
+    "shots": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "start", "duration", "camera", "actions"],
+        "properties": {
+          "id": {"type": "string"},
+          "start": {"type": "number", "minimum": 0},
+          "duration": {"type": "number", "exclusiveMinimum": 0},
+          "camera": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": ["preset"],
+            "properties": {
+              "preset": {"type": "string"},
+              "target": {"type": "string"},
+              "lens_mm": {"type": "number", "exclusiveMinimum": 0}
+            }
+          },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "required": ["actor", "action"],
+              "properties": {
+                "actor": {"type": "string"},
+                "action": {"type": "string"},
+                "target": {"type": "string"},
+                "animation": {"type": "string"}
+              }
+            }
+          }
+        }
+      }
+    },
+    "render": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["width", "height", "fps", "preview_scale"],
+      "properties": {
+        "width": {"type": "integer", "minimum": 320},
+        "height": {"type": "integer", "minimum": 180},
+        "fps": {"type": "integer", "minimum": 1, "maximum": 240},
+        "preview_scale": {"type": "number", "exclusiveMinimum": 0, "maximum": 1}
+      }
+    }
+  }
+}
