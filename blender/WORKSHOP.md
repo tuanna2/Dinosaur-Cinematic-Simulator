@@ -124,3 +124,21 @@ npm run verify:assets
 `export_quality_environment.py` loads the saved candidate and applies reductions
 only to the export session; it never saves the reduced mesh over the source.
 See `docs/VISUAL_QUALITY_PROGRESS.md` for the latest quality verdict.
+
+### Routed structural revision (shot_005)
+
+After the candidate sequence, `trex_structural_revision.py` reads the logical
+`dino_trex_master` catalog entry, preserves `_before_structural.blend`, and edits
+the registered source. It shapes existing thigh/neck vertices, fuses the existing
+exterior skin volumes and transfers stable bone weights. It preserves the jaw,
+accessories, skeleton and actions. A scene marker prevents accidental reapplication.
+
+`trex_structural_uv.py` follows this operation: the first nearest-face UV transfer
+produced visible seams, so this step unwraps the continuous surface and rebakes the
+existing shader. Both scripts were executed with Blender 5.2.1 and followed by real
+browser capture/inspection. They are recorded one-time revisions, not routine
+export commands. Routine export still uses the registered source and `export_glb.py`.
+
+The result has 75,968 exterior vertices and zero nonmanifold exterior edges. This
+is a continuous intermediate mesh, not a claim of finished deformation topology.
+See `docs/SHOT_005_STRUCTURAL_REVIEW.md` for acceptance and remaining work.
