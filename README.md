@@ -16,8 +16,8 @@ See `AGENTS.md` for repository-wide agent rules.
 
 - Three.js + TypeScript + Vite: primary realtime runtime and fast preview engine.
 - Blender 5.2.1: reusable dinosaur/environment master assets exported as GLB/GLTF and future final cinematic rendering.
-- Ollama + FLUX Klein: optional local photorealistic look-development targets from deterministic shot previews.
-- Python standard library: deterministic scenario compiler, preflight, asset resolution, bundle export, look-dev orchestration and visual-critique packaging.
+- Ollama + FLUX Klein: optional local photorealistic look-development targets.
+- Python standard library: deterministic scenario compiler, preflight, asset resolution, bundle export, look-dev orchestration, critique routing and visual-iteration state management.
 - System Chrome/Chromium + `playwright-core`: deterministic shot-preview capture.
 - `agents/*.md`: specialized AI role contracts.
 - `knowledge/*.md`: reusable dinosaur/cinematic knowledge.
@@ -42,8 +42,6 @@ python3 pipeline/preflight.py scenarios/raptor_hunt_001/scenario.json
 
 This validates the scenario, expands actor groups into stable instance IDs, compiles the execution plan, and resolves required logical assets.
 
-During bootstrap the asset catalog is intentionally incomplete, so `missing_assets` is expected until real master assets are registered.
-
 ## 2. Export the web runtime bundle
 
 ```bash
@@ -67,25 +65,9 @@ npm run dev
 
 Open the Vite URL in a browser.
 
-The runtime now supports:
+The runtime supports deterministic execution-plan playback, GLB master loading/skinned cloning, `THREE.AnimationMixer`, dinosaur behavior state mapping, pack spacing, cinematic camera presets, rain/fog/lighting, fixed-step seeking, runtime snapshots and PNG capture.
 
-- deterministic execution-plan playback
-- stable actor/group instance IDs
-- GLB master loading with skinned cloning
-- `THREE.AnimationMixer` playback from embedded or separate animation GLBs
-- cross-fading and one-shot/loop animation policy
-- dinosaur behavior states such as idle/stalk/chase/flee/attack/defend/react/roar
-- deterministic raptor-pack surround spacing and local separation
-- smooth tracking/aerial/telephoto/threat-reveal camera transitions
-- rain, fog, lighting and time-of-day presets
-- placeholder world/dinosaurs when real GLBs are missing
-- automatic removal of the placeholder world when an approved environment GLB exists
-- Play/Pause/Restart/frame-step/timeline seek controls
-- fixed-step deterministic seek at scenario FPS
-- machine-readable runtime snapshots
-- canvas PNG capture API
-
-The browser exposes the running instance as:
+The browser exposes:
 
 ```js
 window.dinosaurRuntime
@@ -102,34 +84,28 @@ window.dinosaurRuntime.snapshot()
 window.dinosaurRuntime.captureDataUrl()
 ```
 
-This browser API is intended for headless capture and visual-critic automation.
-
 ## 4. Capture one preview frame per shot
-
-With Google Chrome/Chromium installed:
 
 ```bash
 cd web
 npm run capture:preview
 ```
 
-The capture script starts Vite, opens the simulator headlessly, seeks deterministically to the midpoint of every camera shot, and writes PNGs under:
+Frames are written under:
 
 ```text
 build/preview/<scenario_id>/
 ```
 
-If Chrome is installed in a non-standard location, set `CHROME_BIN` to the executable path.
-
 ## 5. Generate FLUX cinematic look-dev targets
 
-If your local Ollama setup already supports:
+The tested Ollama model tag is:
 
 ```bash
-ollama run x/flux-klein "a cat holding a sign that says hello world"
+ollama run x/flux2-klein:4b "a cat holding a sign that says hello world"
 ```
 
-then generate a target for one scenario shot with:
+Generate one target:
 
 ```bash
 python3 pipeline/generate_lookdev.py \
@@ -137,21 +113,19 @@ python3 pipeline/generate_lookdev.py \
   --shot-id shot_005
 ```
 
-The default uses Ollama's documented 4B shorthand `x/flux-klein`; the canonical tagged equivalent is `x/flux2-klein:4b`. Do not use `x/flux-klein:4b`.
+The current Ollama integration is text-to-image. It does **not** edit the Three.js preview. The preview remains authoritative for actor count, camera, blocking and continuity; FLUX is only a visual-quality reference for anatomy, materials, lighting, atmosphere and environment richness.
 
-The CLI uses the captured Three.js frame as a reference when available and writes the generated target, prompt and metadata under:
+Outputs:
 
 ```text
-build/lookdev/<scenario_id>/
+build/lookdev/<scenario_id>/<shot_id>.png
+build/lookdev/<scenario_id>/<shot_id>.prompt.txt
+build/lookdev/<scenario_id>/<shot_id>.json
 ```
 
-Generate all shots by omitting `--shot-id`.
+See `docs/FLUX_LOOKDEV.md`.
 
-See `docs/FLUX_LOOKDEV.md` for provider details and reference-image caveats.
-
-## 6. Build a visual-critic package
-
-The preferred workflow is now one command:
+## 6. Build the visual-critic package
 
 ```bash
 python3 pipeline/run_lookdev_loop.py \
@@ -159,33 +133,82 @@ python3 pipeline/run_lookdev_loop.py \
   --shot-id shot_005
 ```
 
-It runs the deterministic export/capture, generates the local FLUX target and packages the comparison for Astra/visual critic.
+This prepares the deterministic preview, FLUX quality target and critique package.
 
-Outputs include:
+The visual critic writes:
 
 ```text
-build/preview/raptor_hunt_001/shot_005.png
-build/lookdev/raptor_hunt_001/shot_005.png
-build/lookdev/raptor_hunt_001/shot_005.prompt.txt
-build/lookdev/raptor_hunt_001/shot_005.json
-build/critique/raptor_hunt_001/shot_005.json
-build/critique/raptor_hunt_001/shot_005.request.md
+build/critique/raptor_hunt_001/shot_005.result.json
 ```
 
-The critique package explicitly keeps scenario semantics and deterministic Three.js staging as source-of-truth. FLUX is only a realism/look target. Structural mesh/material/rig/animation defects are routed to reusable Blender asset work; camera, placement, lighting and preset defects can remain deterministic patches.
-
-To regenerate only critique packaging from existing files:
+Then route it:
 
 ```bash
-python3 pipeline/run_lookdev_loop.py \
+python3 pipeline/route_visual_critique.py \
   scenarios/raptor_hunt_001/scenario.json \
-  --shot-id shot_005 \
-  --skip-export \
-  --skip-capture \
-  --skip-lookdev
+  build/critique/raptor_hunt_001/shot_005.result.json
 ```
 
-See `docs/VISUAL_CRITIQUE_WORKFLOW.md` and `agents/visual-critic.md`.
+Routing separates deterministic patches from reusable Astra/agent work:
+
+```text
+build/work/raptor_hunt_001/shot_005/
+├── routing.json
+├── deterministic_patches.json
+├── work_requests.json
+└── requests/*.md
+```
+
+See `docs/VISUAL_CRITIQUE_WORKFLOW.md` and `docs/CRITIQUE_ROUTING.md`.
+
+## 7. Run repeatable visual-improvement iterations
+
+Before Astra edits the next routed Blender asset:
+
+```bash
+python3 pipeline/run_visual_iteration.py \
+  scenarios/raptor_hunt_001/scenario.json \
+  start \
+  --shot-id shot_005
+```
+
+After Astra edits the registered `.blend` and exports the registered GLB:
+
+```bash
+python3 pipeline/run_visual_iteration.py \
+  scenarios/raptor_hunt_001/scenario.json \
+  capture \
+  --shot-id shot_005
+```
+
+This exports the runtime bundle, runs the web production build, recaptures previews and rebuilds the critique package while reusing the same FLUX visual target.
+
+After the visual critic writes a **new** `shot_005.result.json`:
+
+```bash
+python3 pipeline/run_visual_iteration.py \
+  scenarios/raptor_hunt_001/scenario.json \
+  finalize \
+  --shot-id shot_005
+```
+
+The state machine snapshots before/after evidence, records SHA-256 receipts for targeted registered Blender/GLB assets, reroutes remaining work and writes a deterministic decision:
+
+```text
+PASS
+CONTINUE
+BLOCKED
+```
+
+Iteration evidence is stored under:
+
+```text
+build/iterations/<scenario_id>/<shot_id>/iteration_###/
+```
+
+`PASS` requires critic `pass: true`, no high/blocking issues, no deterministic patches and no routed agent work. Lower weighted issue score means `improved`; higher means `regressed`.
+
+See `docs/VISUAL_ITERATION_LOOP.md`.
 
 ## Blender asset workflow
 
@@ -199,18 +222,7 @@ blender --background blender/dinosaurs/trex/trex_master.blend \
   --output web/public/assets/dinosaurs/trex_master.glb
 ```
 
-After Blender exports an approved GLB, register it through the catalog CLI rather than hard-coding filenames in the scenario:
-
-```bash
-python3 pipeline/register_asset.py dino_trex_master \
-  --type dinosaur \
-  --blender-source blender/dinosaurs/trex/trex_master.blend \
-  --export-path web/public/assets/dinosaurs/trex_master.glb \
-  --web-path /assets/dinosaurs/trex_master.glb \
-  --species tyrannosaurus_rex
-```
-
-Then export the web bundle again.
+After Blender exports an approved GLB, register it through the catalog CLI rather than hard-coding filenames in the scenario.
 
 ## AI work requests
 
@@ -242,6 +254,8 @@ See:
 - `docs/BLENDER_ASSET_CONTRACT.md`
 - `docs/FLUX_LOOKDEV.md`
 - `docs/VISUAL_CRITIQUE_WORKFLOW.md`
+- `docs/CRITIQUE_ROUTING.md`
+- `docs/VISUAL_ITERATION_LOOP.md`
 
 ## Astra bootstrap
 
@@ -249,7 +263,7 @@ After cloning this repository on the workstation with Blender 5.2.1, give Astra 
 
 `ASTRA_BOOTSTRAP_PROMPT.md`
 
-Astra should focus on visual factory-building: create/refine reusable dinosaur/environment masters, rigs, textures and missing animations, export/register GLBs, run the deterministic browser runtime, generate FLUX look-dev targets, consume critique packages and iterate actual 3D quality. The deterministic engine/runtime should be extended only when an actual reusable capability is missing.
+Astra should focus on visual factory-building: improve reusable dinosaur/environment masters, rigs, textures and animations, execute routed work requests, export registered GLBs and use the deterministic iteration state machine to prove improvement in real captures.
 
 ## IP policy
 
