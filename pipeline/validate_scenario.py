@@ -111,6 +111,8 @@ def validate(data: dict[str, Any]) -> list[str]:
         camera = shot.get("camera")
         if not isinstance(camera, dict) or not camera.get("preset"):
             errors.append(f"{prefix}.camera.preset is required")
+        elif camera.get("target") is not None and camera.get("target") not in actor_ids:
+            errors.append(f"{prefix}.camera.target references unknown actor: {camera.get('target')!r}")
 
         actions = shot.get("actions")
         if not isinstance(actions, list):
@@ -125,8 +127,19 @@ def validate(data: dict[str, Any]) -> list[str]:
             actor = action.get("actor")
             if actor != "environment" and actor not in actor_ids:
                 errors.append(f"{aprefix}.actor references unknown actor: {actor!r}")
+            target = action.get("target")
+            if target is not None and target not in actor_ids:
+                errors.append(f"{aprefix}.target references unknown actor: {target!r}")
             if not action.get("action"):
                 errors.append(f"{aprefix}.action is required")
+
+            offset = action.get("offset_seconds", 0)
+            if not isinstance(offset, (int, float)) or offset < 0:
+                errors.append(f"{aprefix}.offset_seconds must be >= 0")
+            elif float(offset) >= float(shot_duration):
+                errors.append(
+                    f"{aprefix}.offset_seconds={offset} must be inside shot duration={shot_duration}"
+                )
 
     if duration and latest_end > float(duration) + 0.001:
         errors.append(
