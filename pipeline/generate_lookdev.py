@@ -52,54 +52,50 @@ def build_prompt(scenario: dict[str, Any], shot: dict[str, Any], has_reference: 
         else:
             action_phrases.append(f"{subject} {verb}")
 
-    preserve = (
-        "Edit the supplied reference image into a photorealistic cinematic target. Preserve the camera angle, "
-        "animal positions, silhouettes, action geography, framing and relative scale as closely as possible. "
-        if has_reference
-        else "Create a production look-development target for this exact cinematic shot. "
-    )
-
     lens = camera.get("lens_mm", 50)
     preset = str(camera.get("preset", "cinematic")).replace("_", " ")
     target = camera.get("target")
     target_text = f", focused on {actor_label(str(target), actors)}" if target else ""
     action_text = "; ".join(action_phrases) or "natural prehistoric animal behavior"
 
-    prompt = (
-        f"{preserve}"
+    preview_note = (
+        "A deterministic Three.js preview exists for downstream comparison, but this Ollama generation step is text-only. "
+        "Create an advisory realism/look target rather than an exact composition replacement. "
+        if has_reference
+        else "Create an advisory production look-development target for this cinematic shot. "
+    )
+
+    return (
+        f"{preview_note}"
         "Photorealistic prehistoric wildlife documentary frame, not a video game screenshot. "
-        f"Scene: {action_text}. Environment: {str(environment.get('asset_id', 'prehistoric wilderness')).replace('_', ' ')}, "
+        f"Scene context: {action_text}. Environment: {str(environment.get('asset_id', 'prehistoric wilderness')).replace('_', ' ')}, "
         f"weather {str(environment.get('weather', 'natural')).replace('_', ' ')}, "
         f"time {str(environment.get('time_of_day', 'day')).replace('_', ' ')}. "
         f"Camera language: {preset}, {lens}mm lens{target_text}. "
-        "Dinosaurs must have paleontologically plausible anatomy, believable body mass and weight, continuous neck, hip and tail transitions, "
+        "Dinosaurs should have paleontologically plausible anatomy, believable body mass and weight, continuous neck, hip and tail transitions, "
         "grounded feet, natural musculature, realistic eyes, teeth, gums and oral tissue. "
         "Skin has physically plausible micro-scales, folds, scars, mud and wet roughness variation without looking embossed or synthetic. "
         "Dense layered prehistoric vegetation, wet ground, atmospheric depth, readable rain, volumetric mist, natural occlusion, cinematic contrast, "
         "physically believable late-afternoon lighting, high-end natural-history documentary realism, subtle filmic color response, realistic depth of field. "
-        "Avoid cartoon styling, plastic skin, low-poly appearance, game UI, text, logos, watermarks, duplicated animals, malformed anatomy, extra limbs and floating feet. "
-        "Do not redesign the shot or add unrelated animals."
+        "Avoid cartoon styling, plastic skin, low-poly appearance, game UI, text, logos, watermarks, malformed anatomy, extra limbs and floating feet. "
+        "Do not introduce unrelated species or modern objects. "
+        "This image is a visual-quality reference only: scenario actor count, exact blocking, camera placement and composition remain authoritative in the deterministic preview."
     )
-    if has_reference:
-        prompt += " Reference image: ./reference.png"
-    return prompt
 
 
 def generated_images(directory: Path) -> list[Path]:
     return sorted(
-        [path for path in directory.iterdir() if path.is_file() and path.suffix.lower() in IMAGE_SUFFIXES and path.name != "reference.png"],
+        [path for path in directory.iterdir() if path.is_file() and path.suffix.lower() in IMAGE_SUFFIXES],
         key=lambda path: path.stat().st_mtime_ns,
     )
 
 
-def run_ollama_cli(*, model: str, prompt: str, reference_path: Path | None, timeout_seconds: int) -> tuple[bytes, str]:
+def run_ollama_cli(*, model: str, prompt: str, timeout_seconds: int) -> tuple[bytes, str]:
     if shutil.which("ollama") is None:
         raise RuntimeError("ollama executable was not found in PATH")
 
     with tempfile.TemporaryDirectory(prefix="dino-flux-") as tmp:
         workdir = Path(tmp)
-        if reference_path is not None:
-            shutil.copy2(reference_path, workdir / "reference.png")
 
         try:
             result = subprocess.run(
@@ -116,13 +112,7 @@ def run_ollama_cli(*, model: str, prompt: str, reference_path: Path | None, time
 
         if result.returncode != 0:
             output = result.stdout.strip()
-            hint = ""
-            if model == "x/flux-klein:4b":
-                hint = (
-                    "\nHint: `x/flux-klein:4b` is not a valid tag in this setup. "
-                    "Use `x/flux2-klein:4b`, which is the tested canonical 4B tag."
-                )
-            raise RuntimeError(f"ollama run failed ({result.returncode}):\n{output}{hint}")
+            raise RuntimeError(f"ollama run failed ({result.returncode}):\n{output}")
 
         images = generated_images(workdir)
         if not images:
@@ -161,7 +151,11 @@ def generate_for_shot(
         "shot_id": shot_id,
         "provider": "ollama_cli",
         "model": model,
+        "generation_input": "text_only",
         "reference_preview": str(reference) if reference else None,
+        "reference_sent_to_model": False,
+        "composition_authority": "deterministic_preview",
+        "lookdev_role": "advisory_anatomy_material_lighting_environment_target",
         "output": str(output_path),
         "command": ["ollama", "run", model, "<prompt>"],
     }
@@ -174,7 +168,6 @@ def generate_for_shot(
     image, cli_output = run_ollama_cli(
         model=model,
         prompt=prompt,
-        reference_path=reference,
         timeout_seconds=timeout_seconds,
     )
     output_path.write_bytes(image)
@@ -185,13 +178,20 @@ def generate_for_shot(
 
 
 def parser() -> argparse.ArgumentParser:
-    p = argparse.ArgumentParser(description="Generate cinematic look-dev target frames with local Ollama FLUX Klein.")
+    p = argparse.ArgumentParser(description="Generate advisory cinematic look-dev target frames with local Ollama FLUX Klein.")
     p.add_argument("scenario", type=Path, help="Scenario JSON path")
     p.add_argument("--shot-id", action="append", help="Shot id to generate; repeatable. Defaults to all shots.")
     p.add_argument("--model", default=DEFAULT_MODEL, help=f"Ollama image model (default: {DEFAULT_MODEL})")
     p.add_argument("--preview-dir", type=Path)
     p.add_argument("--output-dir", type=Path)
-    p.add_argument("--no-preview", action="store_true", help="Do text-to-image only; do not attach the Three.js preview image.")
+    p.add_argument(
+        "--no-preview",
+        action="store_true",
+        help=(
+            "Do not associate an existing deterministic preview with look-dev metadata. "
+            "Ollama generation is text-only either way; the preview is used later by the critic."
+        ),
+    )
     p.add_argument("--timeout", type=int, default=900)
     p.add_argument("--dry-run", action="store_true")
     return p
