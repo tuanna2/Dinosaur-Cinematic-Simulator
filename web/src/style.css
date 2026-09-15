@@ -25,8 +25,8 @@ body,
   left: 16px;
   display: grid;
   gap: 8px;
-  min-width: 280px;
-  max-width: min(520px, calc(100vw - 32px));
+  min-width: 320px;
+  max-width: min(620px, calc(100vw - 32px));
   padding: 14px;
   color: #f4f6f2;
   background: rgba(15, 20, 15, 0.78);
@@ -43,7 +43,19 @@ body,
 
 .controls {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+}
+
+.timeline {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+#seek {
+  width: 100%;
 }
 
 button {
@@ -54,7 +66,8 @@ button {
   cursor: pointer;
 }
 
-button:disabled {
+button:disabled,
+input:disabled {
   cursor: not-allowed;
   opacity: 0.45;
 }
