@@ -24,6 +24,7 @@
           "status": {"type": "string", "enum": ["planned", "draft", "approved", "deprecated"]},
           "blender_source": {"type": "string"},
           "export_path": {"type": "string"},
+          "web_path": {"type": "string"},
           "unreal_path": {"type": "string"},
           "skeleton_id": {"type": "string"},
           "species": {"type": "string"},
