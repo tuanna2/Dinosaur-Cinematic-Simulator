@@ -61,16 +61,16 @@ class PipelineTests(unittest.TestCase):
         encoded = json.dumps(plan)
         self.assertIn("raptor_hunt_001", encoded)
 
-    def test_agent_requests_route_dinosaurs_and_animations(self) -> None:
+    def test_agent_requests_route_dinosaurs_animations_and_environment(self) -> None:
         report = {
             "scenario_id": "test",
-            "missing": ["dino_trex_master", "anim_trex_roar", "env_tropical_rainforest"],
+            "missing_assets": ["dino_trex_master", "anim_trex_roar", "env_tropical_rainforest"],
         }
         requests = build_requests(report)
-        agents = {request["agent"] for request in requests["requests"]}
-        self.assertIn("asset-designer", agents)
-        self.assertIn("animation-director", agents)
-        self.assertIn("environment-designer", agents)
+        agents = {request["agent"] for request in requests}
+        self.assertIn("asset_designer", agents)
+        self.assertIn("animation_director", agents)
+        self.assertIn("environment_designer", agents)
 
     def test_asset_registration_supports_web_path(self) -> None:
         catalog = {"assets": []}
