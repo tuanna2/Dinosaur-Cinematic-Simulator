@@ -2,7 +2,9 @@
 
 ## Goal
 
-Build a reusable cinematic dinosaur simulation pipeline for video production. Unreal Engine is the runtime and renderer; Blender is the asset workshop; AI agents are used only for creative judgment, missing assets, animation repair, scene design, and visual QA.
+Build a reusable dinosaur cinematic simulation pipeline for video production. Three.js is the primary realtime runtime; Blender is the asset workshop; AI agents are used only for creative judgment, missing assets, animation repair, scene design, and visual QA.
+
+Unreal Engine is not required for the default workflow. A future Unreal backend may consume the same execution plan for selected high-end renders without changing scenario semantics.
 
 ## Core principle
 
@@ -13,14 +15,15 @@ Use deterministic code whenever the expected result can be specified exactly. Us
 1. Human/ChatGPT writes a story brief.
 2. Director agent converts the brief to `scenario.json`.
 3. `pipeline/validate_scenario.py` validates structure and timing.
-4. `pipeline/resolve_assets.py` compares requirements against `config/asset_catalog.json`.
-5. Missing assets are delegated to the asset designer / Astra + Blender.
-6. Unreal scene builder loads the scenario, spawns actors, configures environment and builds Sequencer tracks.
-7. Unreal renders a low-cost preview.
-8. Visual critic reviews preview frames and emits bounded patches.
-9. Deterministic code applies approved patches.
-10. Movie Render Queue renders final output.
-11. FFmpeg/TTS/subtitle jobs run downstream.
+4. `pipeline/compile_execution_plan.py` expands stable actor instances and events.
+5. `pipeline/resolve_assets.py` compares requirements against `config/asset_catalog.json`.
+6. Missing assets are delegated to the relevant agent / Astra + Blender.
+7. `pipeline/export_web_bundle.py` exports the deterministic runtime bundle.
+8. Three.js loads the execution plan, GLB asset manifest, environment and camera presets.
+9. Browser preview runs immediately; placeholders may be used only for bootstrap development.
+10. Visual critic may review frames and emit bounded corrections.
+11. Approved corrections become deterministic scenario/preset/code changes.
+12. Browser capture / FFmpeg / TTS / subtitles run downstream.
 
 ## Repository ownership
 
@@ -30,8 +33,9 @@ Use deterministic code whenever the expected result can be specified exactly. Us
 - `config/`: reusable catalogs and runtime configuration.
 - `scenarios/`: production scenario packages.
 - `pipeline/`: deterministic orchestration scripts.
-- `unreal/`: Unreal project and automation (to be bootstrapped by Astra on a machine with Unreal installed).
-- `blender/`: Blender scripts and source assets.
+- `web/`: Vite + TypeScript + Three.js primary runtime.
+- `blender/`: Blender scripts and editable source assets.
+- `exports/`: engine-ready GLB/texture staging when produced locally; large generated files should normally stay out of Git.
 
 ## AI boundaries
 
@@ -46,15 +50,23 @@ AI SHOULD be used for:
 AI SHOULD NOT be used for:
 - spawning an actor with known parameters
 - selecting an existing asset by exact ID
-- setting time of day or weather values
+- setting known weather/time presets
 - playing an existing animation clip
-- creating known Sequencer tracks
+- applying an existing camera preset
 - validating JSON
-- rendering with fixed settings
+- compiling actor groups/events
+- exporting the web runtime bundle
+- normal Three.js playback
 - FFmpeg encoding
 
-## Target runtime
+## Primary runtime
 
-Unreal Engine 5.x with Sequencer, Movie Render Queue, PCG, Control Rig, Navigation and Python/Editor automation as appropriate.
+Three.js + TypeScript + Vite.
+
+The browser runtime consumes `execution_plan.json` and `asset_manifest.json`. Reusable Blender assets are exported as GLB/GLTF and addressed by logical asset IDs through the catalog.
 
 Blender baseline for this repository: 5.2.1.
+
+## Optional future backend
+
+A high-end renderer such as Unreal Engine may be added later behind the same execution-plan contract. It must remain optional and should not become a dependency for normal scenario development or preview production.
