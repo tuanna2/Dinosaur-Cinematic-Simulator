@@ -11,7 +11,9 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_MODEL = "x/flux-klein:4b"
+# Ollama documents the 4B shorthand as `x/flux-klein`; the canonical tagged
+# equivalent is `x/flux2-klein:4b`. Do not append `:4b` to the shorthand.
+DEFAULT_MODEL = "x/flux-klein"
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
 
 
@@ -115,7 +117,14 @@ def run_ollama_cli(*, model: str, prompt: str, reference_path: Path | None, time
             raise RuntimeError(f"ollama run timed out after {timeout_seconds}s") from exc
 
         if result.returncode != 0:
-            raise RuntimeError(f"ollama run failed ({result.returncode}):\n{result.stdout.strip()}")
+            output = result.stdout.strip()
+            hint = ""
+            if model == "x/flux-klein:4b":
+                hint = (
+                    "\nHint: `x/flux-klein:4b` is not a published tag. "
+                    "Use the documented 4B shorthand `x/flux-klein` or canonical `x/flux2-klein:4b`."
+                )
+            raise RuntimeError(f"ollama run failed ({result.returncode}):\n{output}{hint}")
 
         images = generated_images(workdir)
         if not images:
