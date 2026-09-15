@@ -10,9 +10,11 @@ from pipeline.build_agent_requests import build_requests
 from pipeline.build_visual_critique_package import build_package
 from pipeline.compile_execution_plan import compile_plan
 from pipeline.export_web_bundle import export_bundle
+from pipeline.generate_lookdev import DEFAULT_MODEL as LOOKDEV_DEFAULT_MODEL
 from pipeline.generate_lookdev import build_prompt, find_shot
 from pipeline.preflight import resolve_required
 from pipeline.register_asset import register
+from pipeline.run_lookdev_loop import DEFAULT_MODEL as LOOP_DEFAULT_MODEL
 from pipeline.run_lookdev_loop import build_commands
 from pipeline.validate_scenario import load_json, validate
 
@@ -118,6 +120,10 @@ class PipelineTests(unittest.TestCase):
             self.assertEqual(manifest["schema_version"], 1)
             self.assertIsInstance(manifest["assets"], list)
 
+    def test_flux_default_model_is_canonical_4b_tag_everywhere(self) -> None:
+        self.assertEqual(LOOKDEV_DEFAULT_MODEL, "x/flux2-klein:4b")
+        self.assertEqual(LOOP_DEFAULT_MODEL, "x/flux2-klein:4b")
+
     def test_lookdev_prompt_uses_shot_semantics(self) -> None:
         shot = find_shot(self.scenario, "shot_005")
         prompt = build_prompt(self.scenario, shot, False)
@@ -125,13 +131,16 @@ class PipelineTests(unittest.TestCase):
         self.assertIn("tyrannosaurus rex roar", prompt)
         self.assertIn("8 velociraptor react", prompt)
         self.assertIn("32mm lens", prompt)
+        self.assertIn("visual-quality reference only", prompt)
         self.assertNotIn("./reference.png", prompt)
 
-    def test_lookdev_reference_prompt_preserves_composition(self) -> None:
+    def test_lookdev_prompt_does_not_claim_preview_image_editing(self) -> None:
         shot = find_shot(self.scenario, "shot_005")
         prompt = build_prompt(self.scenario, shot, True)
-        self.assertIn("Preserve the camera angle", prompt)
-        self.assertIn("Reference image: ./reference.png", prompt)
+        self.assertIn("this Ollama generation step is text-only", prompt)
+        self.assertIn("advisory realism/look target", prompt)
+        self.assertNotIn("Reference image:", prompt)
+        self.assertNotIn("./reference.png", prompt)
 
     def test_visual_critique_package_links_preview_target_and_relevant_actors(self) -> None:
         shot = find_shot(self.scenario, "shot_005")
@@ -146,7 +155,15 @@ class PipelineTests(unittest.TestCase):
             (lookdev_dir / "shot_005.png").write_bytes(b"target")
             (lookdev_dir / "shot_005.prompt.txt").write_text("prompt\n", encoding="utf-8")
             (lookdev_dir / "shot_005.json").write_text(
-                json.dumps({"provider": "ollama_cli", "model": "x/flux-klein:4b"}),
+                json.dumps(
+                    {
+                        "provider": "ollama_cli",
+                        "model": "x/flux2-klein:4b",
+                        "generation_input": "text_only",
+                        "reference_sent_to_model": False,
+                        "composition_authority": "deterministic_preview",
+                    }
+                ),
                 encoding="utf-8",
             )
 
@@ -160,20 +177,23 @@ class PipelineTests(unittest.TestCase):
             package = json.loads(package_path.read_text(encoding="utf-8"))
             actor_ids = {actor["id"] for actor in package["actors"]}
 
-            self.assertEqual(package["schema_version"], 1)
+            self.assertEqual(package["schema_version"], 2)
             self.assertEqual(package["shot_id"], "shot_005")
             self.assertEqual(actor_ids, {"raptor_pack", "trex_01"})
             self.assertTrue(package["inputs"]["preview_frame"].endswith("shot_005.png"))
             self.assertTrue(package["inputs"]["lookdev_target"].endswith("shot_005.png"))
-            self.assertEqual(package["lookdev_metadata"]["model"], "x/flux-klein:4b")
+            self.assertEqual(package["lookdev_metadata"]["model"], "x/flux2-klein:4b")
+            self.assertFalse(package["lookdev_metadata"]["reference_sent_to_model"])
+            self.assertEqual(package["review_contract"]["composition_authority"], "deterministic_preview")
             self.assertIn("requires_agent", package["expected_output"])
-            self.assertTrue(request_path.exists())
+            request = request_path.read_text(encoding="utf-8")
+            self.assertIn("ignore any different actor count", request)
 
     def test_lookdev_loop_builds_generation_and_packaging_commands(self) -> None:
         commands = build_commands(
             SCENARIO.resolve(),
             shot_ids=["shot_005"],
-            model="x/flux-klein:4b",
+            model="x/flux2-klein:4b",
             timeout=120,
             no_preview=False,
             skip_export=True,
@@ -186,7 +206,7 @@ class PipelineTests(unittest.TestCase):
         lookdev_command = commands[0][0]
         package_command = commands[1][0]
         self.assertTrue(any(part.endswith("generate_lookdev.py") for part in lookdev_command))
-        self.assertIn("x/flux-klein:4b", lookdev_command)
+        self.assertIn("x/flux2-klein:4b", lookdev_command)
         self.assertIn("shot_005", lookdev_command)
         self.assertTrue(any(part.endswith("build_visual_critique_package.py") for part in package_command))
 
