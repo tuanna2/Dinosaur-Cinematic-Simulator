@@ -7,10 +7,12 @@ export class EnvironmentController {
   private readonly initialRainPositions: Float32Array;
   private readonly sun = new THREE.DirectionalLight(0xffffff, 3.0);
   private readonly hemi = new THREE.HemisphereLight(0xffffff, 0x273124, 2.0);
+  private readonly placeholderWorld = new THREE.Group();
   private rainSpeed = 16;
 
   constructor(private readonly scene: THREE.Scene, environment: RuntimeEnvironment) {
-    this.scene.add(this.hemi, this.sun);
+    this.placeholderWorld.name = "__placeholder_world__";
+    this.scene.add(this.hemi, this.sun, this.placeholderWorld);
     this.sun.castShadow = true;
     this.sun.position.set(-12, 22, 8);
 
@@ -20,7 +22,7 @@ export class EnvironmentController {
     );
     ground.rotation.x = -Math.PI / 2;
     ground.receiveShadow = true;
-    this.scene.add(ground);
+    this.placeholderWorld.add(ground);
 
     this.addPlaceholderForest();
     const rain = this.createRain(2200);
@@ -31,6 +33,10 @@ export class EnvironmentController {
 
     this.applyTimeOfDay(environment.time_of_day);
     this.applyWeather(environment.weather);
+  }
+
+  setPlaceholderWorldVisible(visible: boolean): void {
+    this.placeholderWorld.visible = visible;
   }
 
   update(dt: number): void {
@@ -100,7 +106,7 @@ export class EnvironmentController {
       trunk.position.set(x, height * 0.34, z);
       const crown = new THREE.Mesh(new THREE.ConeGeometry(1.1 + (i % 3) * 0.25, height, 8), treeMaterial);
       crown.position.set(x, height * 0.72, z);
-      this.scene.add(trunk, crown);
+      this.placeholderWorld.add(trunk, crown);
     }
   }
 
