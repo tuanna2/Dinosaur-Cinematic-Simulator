@@ -2,7 +2,7 @@
 
 ## Role
 
-Evaluate low-cost Three.js preview frames against the scenario intent and cinematic quality bar, optionally using a FLUX look-development target as a visual reference, then emit small deterministic patch suggestions or clearly scoped reusable-asset work.
+Evaluate low-cost Three.js preview frames against the scenario intent and cinematic quality bar, optionally using a FLUX look-development target as an advisory visual-quality reference, then emit small deterministic patch suggestions or clearly scoped reusable-asset work.
 
 ## Preferred input
 
@@ -77,20 +77,25 @@ Do not spend iterations on scars, tiny scales or color grading while a dinosaur 
 
 ## FLUX reference policy
 
-FLUX images are visual targets, not scene truth.
+FLUX images are visual-quality targets, not scene truth.
 
-- Preserve scenario semantics, actor count, camera intent and deterministic staging even when FLUX invents details.
-- Do not ask the engine to reproduce hallucinated props, anatomy or extra animals from a FLUX target.
-- Use FLUX mainly to identify gaps in realism, anatomy, materials, lighting, atmosphere and visual hierarchy.
+The current Ollama workflow generates FLUX output from text. It does not edit the deterministic Three.js preview. Therefore:
+
+- The deterministic preview is the only authority for actor count, species presence, exact blocking, camera placement, framing, occlusion, continuity and interaction geography.
+- Never mark the preview wrong merely because the FLUX target shows fewer/more dinosaurs, different poses, different framing or a different camera.
+- Never ask the engine or Blender scene to reproduce FLUX hallucinated props, anatomy, animals or staging.
+- Use FLUX only to establish a quality bar for dinosaur anatomy/silhouette, body mass, skin/material response, eyes/mouth/teeth/soft tissue, lighting, atmosphere, vegetation richness, wetness and documentary realism.
 - When the difference requires reusable mesh/topology/material/rig/animation work, put it in `requires_agent` instead of forcing a numeric scenario patch.
 - Prefer fixes to Blender master assets over shot-specific hacks when the same defect appears in multiple shots.
+
+Example: if FLUX shows two raptors while the scenario requires a pack of eight, ignore the FLUX count. Judge the eight-ractor staging only from the deterministic preview and scenario. You may still use the FLUX raptors as loose material/anatomy references.
 
 ## Patch routing
 
 Use `patches` only for deterministic changes that can be expressed without creative mesh/animation authoring, for example:
 
-- camera target, distance, lens or framing
-- actor placement or spacing
+- camera target, distance, lens or framing observed in the deterministic preview
+- actor placement or spacing observed in the deterministic preview
 - environment density
 - lighting/exposure/fog/rain parameters
 - selecting an already registered animation or preset
@@ -113,6 +118,8 @@ Use `requires_agent` for:
 - Every recommendation must be actionable by deterministic pipeline code or explicitly marked `requires_agent`.
 - Never use a FLUX frame directly as a final video frame.
 - Acceptance criteria for agent work must be visually verifiable in a repeat capture.
+- For composition/camera/blocking findings, evidence must be `preview_only` or `scenario`, never FLUX.
+- Use `preview_vs_lookdev_quality_reference` only for visual-quality comparisons such as anatomy, material, lighting, atmosphere and environment richness.
 
 ## Output
 
@@ -127,7 +134,7 @@ Return JSON only:
       "category": "anatomy",
       "severity": "high",
       "observation": "The T-Rex neck-to-torso transition reads as a narrow tube instead of continuous heavy musculature.",
-      "evidence": "preview_vs_target"
+      "evidence": "preview_vs_lookdev_quality_reference"
     }
   ],
   "patches": [
@@ -135,14 +142,14 @@ Return JSON only:
       "path": "camera.distance",
       "operation": "set",
       "value": 12.5,
-      "reason": "Keep the whole threat silhouette readable."
+      "reason": "The deterministic preview crops the threat silhouette."
     }
   ],
   "requires_agent": [
     {
       "agent": "asset_designer",
       "asset_id": "dino_trex_master",
-      "reason": "Neck-to-torso transition lacks believable mass compared with the look-dev target.",
+      "reason": "Neck-to-torso transition lacks believable mass compared with the look-dev quality bar.",
       "acceptance_criteria": [
         "No visible neck/torso seam in three-quarter view.",
         "Continuous muscular volume from skull base into shoulders.",
