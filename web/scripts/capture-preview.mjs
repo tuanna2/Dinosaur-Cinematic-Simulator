@@ -1,5 +1,5 @@
 import { spawn } from "node:child_process";
-import { existsSync, mkdirSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
@@ -63,13 +63,17 @@ try {
   await page.goto(BASE_URL, { waitUntil: "networkidle" });
   await page.waitForFunction(() => Boolean(window.dinosaurRuntime));
 
+  const cameras = [];
   for (const shot of shots) {
     const captureTime = shot.time + Math.max(0, shot.end_time - shot.time) * 0.5;
     await page.evaluate((time) => window.dinosaurRuntime.renderFrameAt(time), captureTime);
-    await page.locator("#viewport").screenshot({ path: resolve(outputDir, `${shot.shot_id}.png`) });
+    cameras.push({ shot: shot.shot_id, time: captureTime, ...await page.evaluate(() => { const c=window.dinosaurRuntime.camera; return { position:c.position.toArray(), quaternion:c.quaternion.toArray(), fov:c.fov }; }) });
+    const dataUrl = await page.evaluate(() => window.dinosaurRuntime.captureDataUrl());
+    writeFileSync(resolve(outputDir, `${shot.shot_id}.png`), Buffer.from(dataUrl.split(",")[1], "base64"));
     process.stdout.write(`CAPTURED ${shot.shot_id} @ ${captureTime.toFixed(3)}s\n`);
   }
 
+  writeFileSync(resolve(outputDir, "cameras.json"), JSON.stringify(cameras, null, 2));
   process.stdout.write(`WROTE ${shots.length} preview frames to ${outputDir}\n`);
 } finally {
   await browser?.close();

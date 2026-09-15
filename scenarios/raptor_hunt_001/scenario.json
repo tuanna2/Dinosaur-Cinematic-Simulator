@@ -19,7 +19,7 @@
       "id": "shot_001",
       "start": 0,
       "duration": 8,
-      "camera": {"preset": "aerial_establishing", "lens_mm": 28},
+      "camera": {"preset": "aerial_establishing", "lens_mm": 35},
       "actions": [
         {"actor": "environment", "action": "establish"},
         {"actor": "triceratops_01", "action": "graze", "animation": "anim_triceratops_graze"}
@@ -29,7 +29,7 @@
       "id": "shot_002",
       "start": 8,
       "duration": 14,
-      "camera": {"preset": "static_hide", "target": "raptor_pack", "lens_mm": 85},
+      "camera": {"preset": "static_hide", "target": "raptor_pack", "lens_mm": 48},
       "actions": [
         {"actor": "raptor_pack", "action": "stalk", "target": "triceratops_01", "animation": "anim_raptor_stalk"}
       ]
@@ -38,7 +38,7 @@
       "id": "shot_003",
       "start": 22,
       "duration": 18,
-      "camera": {"preset": "medium_tracking", "target": "triceratops_01", "lens_mm": 50},
+      "camera": {"preset": "medium_tracking", "target": "triceratops_01", "lens_mm": 34},
       "actions": [
         {"actor": "raptor_pack", "action": "attack", "target": "triceratops_01", "animation": "anim_raptor_attack"},
         {"actor": "triceratops_01", "action": "defend", "target": "raptor_pack", "animation": "anim_triceratops_defend"}
@@ -48,7 +48,7 @@
       "id": "shot_004",
       "start": 40,
       "duration": 20,
-      "camera": {"preset": "medium_tracking", "target": "triceratops_01", "lens_mm": 70},
+      "camera": {"preset": "medium_tracking", "target": "triceratops_01", "lens_mm": 40},
       "actions": [
         {"actor": "triceratops_01", "action": "flee_to_grassland", "animation": "anim_triceratops_run"},
         {"actor": "raptor_pack", "action": "chase", "target": "triceratops_01", "animation": "anim_raptor_run"}
@@ -58,7 +58,7 @@
       "id": "shot_005",
       "start": 125,
       "duration": 12,
-      "camera": {"preset": "low_threat_reveal", "target": "trex_01", "lens_mm": 40},
+      "camera": {"preset": "low_threat_reveal", "target": "trex_01", "lens_mm": 32},
       "actions": [
         {"actor": "trex_01", "action": "enter", "animation": "anim_trex_walk", "offset_seconds": 0},
         {"actor": "trex_01", "action": "roar", "animation": "anim_trex_roar", "offset_seconds": 6},
@@ -69,7 +69,7 @@
       "id": "shot_006",
       "start": 137,
       "duration": 28,
-      "camera": {"preset": "wide_observational", "target": "trex_01", "lens_mm": 55},
+      "camera": {"preset": "wide_observational", "target": "trex_01", "lens_mm": 45},
       "actions": [
         {"actor": "trex_01", "action": "attack", "target": "raptor_pack", "animation": "anim_trex_attack"},
         {"actor": "raptor_pack", "action": "scatter", "target": "trex_01", "animation": "anim_raptor_flee"}
@@ -79,7 +79,7 @@
       "id": "shot_007",
       "start": 165,
       "duration": 15,
-      "camera": {"preset": "long_lens_observation", "target": "trex_01", "lens_mm": 120},
+      "camera": {"preset": "long_lens_observation", "target": "trex_01", "lens_mm": 95},
       "actions": [
         {"actor": "trex_01", "action": "victory_roar", "animation": "anim_trex_roar"},
         {"actor": "raptor_pack", "action": "retreat", "animation": "anim_raptor_flee"}

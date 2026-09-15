@@ -1,5 +1,171 @@
 {
   "schema_version": 1,
   "blender_version": "5.2.1",
-  "assets": []
+  "assets": [
+    {
+      "id": "anim_raptor_attack",
+      "type": "animation",
+      "status": "approved",
+      "blender_source": "blender/dinosaurs/velociraptor/velociraptor_master.blend",
+      "export_path": "web/public/assets/dinosaurs/velociraptor_master.glb",
+      "web_path": "/assets/dinosaurs/velociraptor_master.glb",
+      "skeleton_id": "velociraptor_v1",
+      "species": "velociraptor",
+      "notes": "Reviewed for reusable bootstrap previews only; cinematic visual target remains unmet. See docs/VISUAL_BOOTSTRAP_REVIEW.md."
+    },
+    {
+      "id": "anim_raptor_flee",
+      "type": "animation",
+      "status": "approved",
+      "blender_source": "blender/dinosaurs/velociraptor/velociraptor_master.blend",
+      "export_path": "web/public/assets/dinosaurs/velociraptor_master.glb",
+      "web_path": "/assets/dinosaurs/velociraptor_master.glb",
+      "skeleton_id": "velociraptor_v1",
+      "species": "velociraptor",
+      "notes": "Reviewed for reusable bootstrap previews only; cinematic visual target remains unmet. See docs/VISUAL_BOOTSTRAP_REVIEW.md."
+    },
+    {
+      "id": "anim_raptor_react",
+      "type": "animation",
+      "status": "approved",
+      "blender_source": "blender/dinosaurs/velociraptor/velociraptor_master.blend",
+      "export_path": "web/public/assets/dinosaurs/velociraptor_master.glb",
+      "web_path": "/assets/dinosaurs/velociraptor_master.glb",
+      "skeleton_id": "velociraptor_v1",
+      "species": "velociraptor",
+      "notes": "Reviewed for reusable bootstrap previews only; cinematic visual target remains unmet. See docs/VISUAL_BOOTSTRAP_REVIEW.md."
+    },
+    {
+      "id": "anim_raptor_run",
+      "type": "animation",
+      "status": "approved",
+      "blender_source": "blender/dinosaurs/velociraptor/velociraptor_master.blend",
+      "export_path": "web/public/assets/dinosaurs/velociraptor_master.glb",
+      "web_path": "/assets/dinosaurs/velociraptor_master.glb",
+      "skeleton_id": "velociraptor_v1",
+      "species": "velociraptor",
+      "notes": "Reviewed for reusable bootstrap previews only; cinematic visual target remains unmet. See docs/VISUAL_BOOTSTRAP_REVIEW.md."
+    },
+    {
+      "id": "anim_raptor_stalk",
+      "type": "animation",
+      "status": "approved",
+      "blender_source": "blender/dinosaurs/velociraptor/velociraptor_master.blend",
+      "export_path": "web/public/assets/dinosaurs/velociraptor_master.glb",
+      "web_path": "/assets/dinosaurs/velociraptor_master.glb",
+      "skeleton_id": "velociraptor_v1",
+      "species": "velociraptor",
+      "notes": "Reviewed for reusable bootstrap previews only; cinematic visual target remains unmet. See docs/VISUAL_BOOTSTRAP_REVIEW.md."
+    },
+    {
+      "id": "anim_trex_attack",
+      "type": "animation",
+      "status": "approved",
+      "blender_source": "blender/dinosaurs/trex/trex_quality_candidate.blend",
+      "export_path": "web/public/assets/dinosaurs/trex_master.glb",
+      "web_path": "/assets/dinosaurs/trex_master.glb",
+      "skeleton_id": "trex_v1",
+      "species": "tyrannosaurus_rex",
+      "notes": "Runtime-compatible workshop candidate; NOT cinematic/JWE quality approval. See docs/VISUAL_QUALITY_PROGRESS.md."
+    },
+    {
+      "id": "anim_trex_roar",
+      "type": "animation",
+      "status": "approved",
+      "blender_source": "blender/dinosaurs/trex/trex_quality_candidate.blend",
+      "export_path": "web/public/assets/dinosaurs/trex_master.glb",
+      "web_path": "/assets/dinosaurs/trex_master.glb",
+      "skeleton_id": "trex_v1",
+      "species": "tyrannosaurus_rex",
+      "notes": "Runtime-compatible workshop candidate; NOT cinematic/JWE quality approval. See docs/VISUAL_QUALITY_PROGRESS.md."
+    },
+    {
+      "id": "anim_trex_walk",
+      "type": "animation",
+      "status": "approved",
+      "blender_source": "blender/dinosaurs/trex/trex_quality_candidate.blend",
+      "export_path": "web/public/assets/dinosaurs/trex_master.glb",
+      "web_path": "/assets/dinosaurs/trex_master.glb",
+      "skeleton_id": "trex_v1",
+      "species": "tyrannosaurus_rex",
+      "notes": "Runtime-compatible workshop candidate; NOT cinematic/JWE quality approval. See docs/VISUAL_QUALITY_PROGRESS.md."
+    },
+    {
+      "id": "anim_triceratops_defend",
+      "type": "animation",
+      "status": "approved",
+      "blender_source": "blender/dinosaurs/triceratops/triceratops_master.blend",
+      "export_path": "web/public/assets/dinosaurs/triceratops_master.glb",
+      "web_path": "/assets/dinosaurs/triceratops_master.glb",
+      "skeleton_id": "triceratops_v1",
+      "species": "triceratops",
+      "notes": "Reviewed for reusable bootstrap previews only; cinematic visual target remains unmet. See docs/VISUAL_BOOTSTRAP_REVIEW.md."
+    },
+    {
+      "id": "anim_triceratops_graze",
+      "type": "animation",
+      "status": "approved",
+      "blender_source": "blender/dinosaurs/triceratops/triceratops_master.blend",
+      "export_path": "web/public/assets/dinosaurs/triceratops_master.glb",
+      "web_path": "/assets/dinosaurs/triceratops_master.glb",
+      "skeleton_id": "triceratops_v1",
+      "species": "triceratops",
+      "notes": "Reviewed for reusable bootstrap previews only; cinematic visual target remains unmet. See docs/VISUAL_BOOTSTRAP_REVIEW.md."
+    },
+    {
+      "id": "anim_triceratops_run",
+      "type": "animation",
+      "status": "approved",
+      "blender_source": "blender/dinosaurs/triceratops/triceratops_master.blend",
+      "export_path": "web/public/assets/dinosaurs/triceratops_master.glb",
+      "web_path": "/assets/dinosaurs/triceratops_master.glb",
+      "skeleton_id": "triceratops_v1",
+      "species": "triceratops",
+      "notes": "Reviewed for reusable bootstrap previews only; cinematic visual target remains unmet. See docs/VISUAL_BOOTSTRAP_REVIEW.md."
+    },
+    {
+      "id": "dino_trex_master",
+      "type": "dinosaur",
+      "status": "approved",
+      "blender_source": "blender/dinosaurs/trex/trex_quality_candidate.blend",
+      "export_path": "web/public/assets/dinosaurs/trex_master.glb",
+      "web_path": "/assets/dinosaurs/trex_master.glb",
+      "skeleton_id": "trex_v1",
+      "species": "tyrannosaurus_rex",
+      "notes": "Runtime-compatible workshop candidate; NOT cinematic/JWE quality approval. See docs/VISUAL_QUALITY_PROGRESS.md."
+    },
+    {
+      "id": "dino_triceratops_master",
+      "type": "dinosaur",
+      "status": "approved",
+      "blender_source": "blender/dinosaurs/triceratops/triceratops_master.blend",
+      "export_path": "web/public/assets/dinosaurs/triceratops_master.glb",
+      "web_path": "/assets/dinosaurs/triceratops_master.glb",
+      "skeleton_id": "triceratops_v1",
+      "species": "triceratops",
+      "notes": "Reviewed for reusable bootstrap previews only; cinematic visual target remains unmet. See docs/VISUAL_BOOTSTRAP_REVIEW.md."
+    },
+    {
+      "id": "dino_velociraptor_master",
+      "type": "dinosaur",
+      "status": "approved",
+      "blender_source": "blender/dinosaurs/velociraptor/velociraptor_master.blend",
+      "export_path": "web/public/assets/dinosaurs/velociraptor_master.glb",
+      "web_path": "/assets/dinosaurs/velociraptor_master.glb",
+      "skeleton_id": "velociraptor_v1",
+      "species": "velociraptor",
+      "notes": "Reviewed for reusable bootstrap previews only; cinematic visual target remains unmet. See docs/VISUAL_BOOTSTRAP_REVIEW.md."
+    },
+    {
+      "id": "env_tropical_rainforest",
+      "type": "environment",
+      "status": "approved",
+      "blender_source": "blender/environments/tropical_rainforest_quality_candidate.blend",
+      "export_path": "web/public/assets/environments/tropical_rainforest.glb",
+      "web_path": "/assets/environments/tropical_rainforest.glb",
+      "skeleton_id": "none",
+      "species": "environment",
+      "notes": "Runtime-compatible workshop candidate; NOT cinematic/JWE quality approval. Export with blender/export_quality_environment.py. See docs/VISUAL_QUALITY_PROGRESS.md."
+    }
+  ]
 }

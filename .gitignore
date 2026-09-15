@@ -50,3 +50,10 @@ exports/
 Thumbs.db
 .idea/
 .vscode/
+
+# Local editable workshop masters and revision history (rebuild scripts are tracked)
+blender/**/*.blend
+web/*.tsbuildinfo
+
+# Generated packed texture bakes; rebuilt by the workshop scripts
+blender/dinosaurs/*/textures/

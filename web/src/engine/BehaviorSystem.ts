@@ -30,13 +30,14 @@ export class BehaviorSystem {
     actorPosition: THREE.Vector3,
     targetPosition: THREE.Vector3 | null,
     neighbors: readonly THREE.Vector3[],
+    minimumTargetDistance = 0,
   ): THREE.Vector3 {
     const direction = new THREE.Vector3();
 
     if (targetPosition) {
       const destination = targetPosition.clone();
       if (groupId === "raptor_pack" && intent.state !== "flee") {
-        destination.add(this.packSlot(actorId, intent.action));
+        destination.add(this.packSlot(actorId, intent.action, minimumTargetDistance));
       }
       direction.subVectors(destination, actorPosition);
     } else {
@@ -55,10 +56,10 @@ export class BehaviorSystem {
     return direction.lengthSq() > 0.0001 ? direction.normalize() : direction;
   }
 
-  private packSlot(actorId: string, action: string): THREE.Vector3 {
+  private packSlot(actorId: string, action: string, minimumDistance: number): THREE.Vector3 {
     const index = this.stableIndex(actorId, 8);
     const angle = (index / 8) * Math.PI * 2;
-    const radius = action === "stalk" ? 5.0 : action === "attack" ? 1.5 : 2.8;
+    const radius = Math.max(minimumDistance, action === "stalk" ? 5.0 : action === "attack" ? 1.5 : 2.8);
     return new THREE.Vector3(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
   }
 

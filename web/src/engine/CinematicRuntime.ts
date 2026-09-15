@@ -47,6 +47,7 @@ export class CinematicRuntime {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0;
@@ -84,6 +85,10 @@ export class CinematicRuntime {
       actor.userData.species = instance.species;
       actor.userData.animationId = null;
       this.enableShadows(actor);
+      // A fixed 1.5m pack slot intersects larger loaded animals. Derive a
+      // conservative horizontal body clearance from the actual master bounds.
+      const size = new THREE.Box3().setFromObject(actor).getSize(new THREE.Vector3());
+      actor.userData.bodyClearance = Math.max(0.25, Math.min(size.x, size.z) * 0.5, Math.max(size.x, size.z) * 0.3);
 
       const position = this.spawnPosition(instance.group_id, index);
       actor.position.copy(position);
@@ -242,6 +247,7 @@ export class CinematicRuntime {
 
       const target = intent.targetIds.length ? this.actors.get(intent.targetIds[0]) ?? null : null;
       const targetPosition = target?.position ?? null;
+      const clearance = target ? Number(actor.userData.bodyClearance) + Number(target.userData.bodyClearance) : 0;
       const groupId = String(actor.userData.groupId ?? "");
       const neighbors = this.groupNeighborPositions(groupId, id);
       const direction = this.behavior.desiredDirection(
@@ -251,14 +257,23 @@ export class CinematicRuntime {
         actor.position,
         targetPosition,
         neighbors,
+        clearance,
       );
       if (direction.lengthSq() < 0.0001) continue;
 
       let speed = intent.speed;
       if (targetPosition) {
         const distance = actor.position.distanceTo(targetPosition);
-        if (intent.state === "attack" && distance < 2.0) speed = 0;
-        if (intent.state === "chase" && distance < 1.5) speed = 0;
+        if (intent.state === "attack" || intent.state === "chase") {
+          const stopDistance = Math.max(clearance, intent.state === "attack" ? 2.0 : 1.5);
+          if (distance < stopDistance && distance > 0.0001) {
+            // Resolve an existing overlap gradually, including on state changes.
+            direction.subVectors(actor.position, targetPosition).normalize();
+            speed = Math.min(speed, (stopDistance - distance) / dt);
+          } else {
+            speed = Math.min(speed, Math.max(0, distance - stopDistance) / dt);
+          }
+        }
       }
 
       actor.position.addScaledVector(direction, speed * dt);

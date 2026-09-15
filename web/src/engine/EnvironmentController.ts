@@ -14,6 +14,12 @@ export class EnvironmentController {
     this.placeholderWorld.name = "__placeholder_world__";
     this.scene.add(this.hemi, this.sun, this.placeholderWorld);
     this.sun.castShadow = true;
+    // Real metre-scale assets exceed the default 10m shadow frustum.
+    this.sun.shadow.mapSize.set(2048, 2048);
+    Object.assign(this.sun.shadow.camera, { left: -55, right: 55, top: 55, bottom: -55, near: 0.5, far: 160 });
+    this.sun.shadow.normalBias = 0.045;
+    this.sun.shadow.bias = -0.0001;
+    this.sun.shadow.camera.updateProjectionMatrix();
     this.sun.position.set(-12, 22, 8);
 
     const ground = new THREE.Mesh(

@@ -7,7 +7,9 @@
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "capture:preview": "node scripts/capture-preview.mjs"
+    "capture:preview": "node scripts/capture-preview.mjs",
+    "verify:assets": "node scripts/verify-assets.mjs",
+    "capture:hero": "node scripts/capture-hero.mjs"
   },
   "dependencies": {
     "three": "0.186.0"
