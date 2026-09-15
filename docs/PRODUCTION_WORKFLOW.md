@@ -29,9 +29,9 @@ build/preflight/<scenario_id>/execution_plan.json
 
 Possible statuses:
 
-- `ready`: continue directly to Unreal; no AI agent is needed
+- `ready`: continue directly to the web runtime; no AI agent is needed
 - `missing_assets`: create explicit agent work requests
-- `invalid_scenario`: fix the scenario/spec before touching Unreal
+- `invalid_scenario`: fix the scenario/spec before runtime execution
 
 ## 3. Create AI work only when needed
 
@@ -50,22 +50,44 @@ The request file routes gaps to specialized roles. Examples:
 - `anim_*` -> animation director
 - camera/weather presets -> the appropriate specialist
 
-The AI agent must produce reusable assets/presets and register them in `config/asset_catalog.json`. Then rerun preflight. The normal goal is for the scenario to become `ready` and proceed without further AI involvement.
+The AI agent must produce reusable assets/presets and register them in `config/asset_catalog.json`. Then rerun preflight.
 
-## 4. Unreal execution
+During early bootstrap, the browser runtime may show obvious synthetic dinosaur placeholders even while preflight reports missing real assets. This lets camera, timing and behavior code progress without pretending the master asset exists.
 
-The Unreal implementation consumes `execution_plan.json` according to `docs/UNREAL_EXECUTION_CONTRACT.md`.
+## 4. Export the Three.js runtime bundle
+
+Run:
+
+```bash
+python3 pipeline/export_web_bundle.py scenarios/<scenario_id>/scenario.json
+```
+
+This writes:
+
+```text
+web/public/runtime/execution_plan.json
+web/public/runtime/asset_manifest.json
+```
+
+Then:
+
+```bash
+cd web
+npm install
+npm run dev
+```
+
+The Three.js implementation consumes the compiled plan according to `docs/THREEJS_EXECUTION_CONTRACT.md`.
 
 Normal execution is deterministic:
 
 ```text
 execution plan
-  -> resolve environment
+  -> resolve GLB or bootstrap placeholder
   -> spawn actor instances
-  -> apply actions/animations
+  -> apply actions/steering/animations
   -> apply camera presets
-  -> construct Sequencer
-  -> preview render
+  -> realtime browser preview
 ```
 
 ## 5. Visual QA
@@ -81,15 +103,15 @@ A visual critic inspects preview frames and returns structured corrections such 
 - collision/interpenetration problem
 - environment readability issue
 
-Corrections should become deterministic scenario/preset patches whenever possible. The agent should not manually rebuild the whole shot on every run.
+Corrections should become deterministic scenario/preset/code patches whenever possible. The agent should not manually rebuild the whole shot on every run.
 
-## 6. Final render and post-production
+## 6. Capture and post-production
 
 After visual QA passes:
 
 ```text
-Unreal Movie Render Queue
-  -> frames/video
+Three.js browser runtime
+  -> deterministic capture / frames/video
   -> FFmpeg/post-processing
   -> narration/TTS
   -> subtitles
@@ -99,7 +121,7 @@ Unreal Movie Render Queue
 
 ## Bootstrap phase vs mature phase
 
-During bootstrap, Astra may create most master dinosaurs, environments, animation sets, camera presets and Unreal automation. This is temporary factory-building work.
+During bootstrap, Astra may create most master dinosaurs, environments, animation sets and selected visual systems in Blender/Three.js. This is temporary factory-building work.
 
 As the library matures, production should increasingly look like:
 
@@ -107,11 +129,13 @@ As the library matures, production should increasingly look like:
 Chat brief
   -> scenario.json
   -> preflight
-  -> ready
-  -> Unreal
+  -> export web bundle
+  -> Three.js
   -> preview
   -> optional visual critic
-  -> final render
+  -> capture
 ```
 
 Astra should then be invoked primarily for new assets, missing animations, new reusable presets, or visual failures that deterministic rules cannot solve.
+
+A future Unreal backend is optional. If added, it should consume the same execution plan rather than replacing this workflow.
