@@ -1,49 +1,86 @@
 # FLUX look-development workflow
 
-This repository can use a local Ollama image-generation model as a visual look-development assistant. It does not replace Blender geometry, animation, or final rendering.
+This repository can use a local Ollama FLUX.2 Klein model as a visual look-development assistant. It does not replace Blender geometry, animation, Three.js staging, or final rendering.
 
 Default model:
-
-```text
-x/flux-klein
-```
-
-This matches Ollama's documented 4B shorthand and the working local command:
-
-```bash
-ollama run x/flux-klein "a cat holding a sign that says hello world"
-```
-
-The canonical tagged equivalent is:
 
 ```text
 x/flux2-klein:4b
 ```
 
-Do **not** use `x/flux-klein:4b`; that shorthand-plus-tag combination is not a published model tag and causes Ollama to try a failing manifest pull.
+This matches the tested local command:
+
+```bash
+ollama run x/flux2-klein:4b "a cat holding a sign that says hello world"
+```
 
 ## Purpose
 
-The Three.js runtime remains the deterministic source of truth for shot timing, actor positions, behavior and camera composition. FLUX produces a photorealistic target frame that helps the visual critic and asset agents reason about:
+The deterministic Three.js runtime remains the source of truth for:
+
+- actor count and species
+- actor positions and interaction geography
+- shot timing
+- camera placement and framing
+- continuity
+- animation playback
+
+FLUX produces an advisory visual-quality target that helps the visual critic and asset agents reason about:
 
 - dinosaur anatomy and body mass
+- silhouette quality
 - skin/material response
 - eyes, mouth, teeth and soft tissue
 - lighting and atmosphere
-- foliage density and ground treatment
-- cinematic contrast and depth
+- foliage richness and ground treatment
+- cinematic contrast and documentary realism
 
-The generated image is a reference target only. Do not use it as a replacement video frame and do not infer exact 3D geometry from it.
+The generated image is a reference target only. Never use it as a replacement video frame and never infer exact scene geometry or blocking from it.
+
+## Important Ollama limitation
+
+The current repository integration invokes:
+
+```bash
+ollama run x/flux2-klein:4b "<prompt>"
+```
+
+as a text-to-image command.
+
+The captured Three.js preview is **not** sent into the FLUX model in this workflow. It remains available separately for the downstream visual critic. Therefore FLUX may change:
+
+- actor count
+- poses
+- camera angle
+- framing
+- blocking
+- environment layout
+
+This is expected. Those differences are not scene defects.
+
+For example, if the scenario contains eight raptors but the FLUX image shows two, the critic must ignore the FLUX count and use the scenario + deterministic preview as authoritative.
+
+Metadata records this explicitly:
+
+```json
+{
+  "generation_input": "text_only",
+  "reference_sent_to_model": false,
+  "composition_authority": "deterministic_preview",
+  "lookdev_role": "advisory_anatomy_material_lighting_environment_target"
+}
+```
 
 ## Prerequisites
 
-Confirm the exact local command works first:
+Confirm the exact local model works first:
 
 ```bash
-ollama run x/flux-klein "photorealistic tyrannosaurus rex in a wet prehistoric rainforest"
+ollama run x/flux2-klein:4b \
+  "photorealistic tyrannosaurus rex in a wet prehistoric rainforest"
 ```
 
-The integration intentionally invokes the `ollama` CLI rather than relying on an experimental HTTP image API. Ollama writes generated images into the command's current directory; the pipeline runs each generation inside an isolated temporary directory and copies the resulting image into `build/lookdev/...`.
+Generated images are written to the command's current directory. The pipeline runs Ollama in an isolated temporary directory and copies the newest generated image into `build/lookdev/...`.
 
 No Python packages beyond the standard library are required.
 
@@ -70,8 +107,6 @@ python3 pipeline/generate_lookdev.py \
   --shot-id shot_005
 ```
 
-If `build/preview/<scenario>/<shot>.png` exists, the command copies it to the isolated generation directory as `reference.png` and includes `./reference.png` in the Ollama prompt. This follows Ollama's normal CLI convention for attaching an image path. FLUX is asked to preserve composition while upgrading the frame into a photorealistic target.
-
 Outputs:
 
 ```text
@@ -80,30 +115,41 @@ build/lookdev/raptor_hunt_001/shot_005.prompt.txt
 build/lookdev/raptor_hunt_001/shot_005.json
 ```
 
+The prompt includes the shot semantics, environment intent and camera language, but the FLUX result is not required to match the deterministic composition.
+
 ## Generate all shots
 
 ```bash
 python3 pipeline/generate_lookdev.py scenarios/raptor_hunt_001/scenario.json
 ```
 
-## Useful options
-
-Generate without attaching the Three.js frame:
+## One-command workflow
 
 ```bash
-python3 pipeline/generate_lookdev.py \
+python3 pipeline/run_lookdev_loop.py \
   scenarios/raptor_hunt_001/scenario.json \
-  --shot-id shot_005 \
-  --no-preview
+  --shot-id shot_005
 ```
 
-Use the canonical tagged model explicitly:
+If preview frames already exist:
+
+```bash
+python3 pipeline/run_lookdev_loop.py \
+  scenarios/raptor_hunt_001/scenario.json \
+  --shot-id shot_005 \
+  --skip-export \
+  --skip-capture
+```
+
+## Useful options
+
+Use another local model tag:
 
 ```bash
 python3 pipeline/generate_lookdev.py \
   scenarios/raptor_hunt_001/scenario.json \
   --shot-id shot_005 \
-  --model x/flux2-klein:4b
+  --model x/flux2-klein:4b-fp8
 ```
 
 Inspect the generated prompt without invoking Ollama:
@@ -115,24 +161,39 @@ python3 pipeline/generate_lookdev.py \
   --dry-run
 ```
 
-## Ollama image settings
+`--no-preview` now only prevents associating an existing preview path with the generated look-dev metadata. Ollama generation remains text-only either way.
 
-Ollama image-generation settings such as image width, height, steps, seed and negative prompt are currently interactive `/set` settings. This integration deliberately starts with the proven one-shot `ollama run MODEL PROMPT` path rather than attempting to emulate unstable image-generation API fields.
+## Critique policy
 
-If reproducible settings become important, extend the provider layer to launch an interactive session or use the stable image API available in the installed Ollama version. Do not leak provider-specific settings into scenario JSON.
+The critic must split responsibilities this way:
 
-## Reference-image caveat
+```text
+scenario + deterministic Three.js preview
+        -> actor count
+        -> blocking
+        -> camera/framing
+        -> continuity
+        -> motion geography
 
-FLUX.2 Klein advertises generation/editing capabilities, but CLI support can vary between Ollama builds. If attaching the preview fails or gives poor results, run with `--no-preview`. The result is still useful for anatomy, material, lighting and environment look development, but should not be treated as an exact composition match.
+FLUX target
+        -> anatomy/silhouette quality bar
+        -> materials/skin/wetness
+        -> eyes/mouth/teeth quality bar
+        -> lighting/atmosphere
+        -> environment richness
+        -> documentary realism
+```
+
+Never change the real scene merely to reproduce a FLUX hallucination.
 
 ## Agent workflow
 
 ```text
 scenario.json
-   -> Three.js deterministic preview
-   -> FLUX target image
-   -> visual critic compares preview vs target
-   -> asset/environment/animation agent changes Blender masters
+   -> deterministic Three.js preview
+   -> text-generated FLUX visual-quality target
+   -> visual critic uses each source for its proper dimensions
+   -> asset/environment/animation agent changes reusable Blender masters
    -> export GLB + capture preview again
    -> repeat until accepted
    -> Blender/Cycles final rendering
