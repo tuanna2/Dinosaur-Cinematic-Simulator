@@ -3,15 +3,17 @@ import { AssetRegistry } from "./engine/AssetRegistry";
 import { CinematicRuntime } from "./engine/CinematicRuntime";
 import type { AssetManifest, ExecutionPlan } from "./types";
 
-const canvas = document.querySelector<HTMLCanvasElement>("#viewport");
-const status = document.querySelector<HTMLSpanElement>("#status");
-const timeLabel = document.querySelector<HTMLSpanElement>("#time");
-const playButton = document.querySelector<HTMLButtonElement>("#play");
-const restartButton = document.querySelector<HTMLButtonElement>("#restart");
-
-if (!canvas || !status || !timeLabel || !playButton || !restartButton) {
-  throw new Error("runtime DOM is incomplete");
+function requireElement<T extends Element>(selector: string): T {
+  const element = document.querySelector<T>(selector);
+  if (!element) throw new Error(`missing required DOM element: ${selector}`);
+  return element;
 }
+
+const canvas = requireElement<HTMLCanvasElement>("#viewport");
+const status = requireElement<HTMLSpanElement>("#status");
+const timeLabel = requireElement<HTMLSpanElement>("#time");
+const playButton = requireElement<HTMLButtonElement>("#play");
+const restartButton = requireElement<HTMLButtonElement>("#restart");
 
 function formatTime(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
