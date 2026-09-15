@@ -32,7 +32,7 @@ Local baseline:
 - Blender: 5.2.1
 - Runtime: Three.js + TypeScript + Vite
 - Browser: Chrome/Chromium
-- Local look-dev: Ollama + `x/flux-klein:4b`
+- Local look-dev: Ollama + `x/flux-klein` (canonical tagged equivalent: `x/flux2-klein:4b`)
 - Unreal Engine is not required.
 
 ## Architecture rule
@@ -78,7 +78,7 @@ npm run dev
 Confirm local FLUX separately:
 
 ```bash
-ollama run x/flux-klein:4b "a photorealistic tyrannosaurus rex in a wet prehistoric rainforest"
+ollama run x/flux-klein "a photorealistic tyrannosaurus rex in a wet prehistoric rainforest"
 ```
 
 Inspect the current runtime in the browser before creating or changing assets.
