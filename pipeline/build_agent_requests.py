@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Convert deterministic preflight gaps into explicit AI-agent work requests.
 
-This script does not call an AI model. It only decides whether a missing logical
-asset belongs to an asset or animation workflow and emits a machine-readable
-request that an orchestrator can hand to Astra/Codex later.
+This script does not call an AI model. It only classifies missing logical assets
+and emits machine-readable requests that an orchestrator can hand to an agent
+later.
 """
 
 from __future__ import annotations
@@ -20,7 +20,7 @@ def classify(asset_id: str) -> tuple[str, str]:
     if asset_id.startswith("dino_"):
         return "asset_designer", "create_dinosaur_master"
     if asset_id.startswith("env_"):
-        return "asset_designer", "create_environment"
+        return "environment_designer", "create_environment"
     if asset_id.startswith("prop_"):
         return "asset_designer", "create_prop"
     if asset_id.startswith("camera_"):

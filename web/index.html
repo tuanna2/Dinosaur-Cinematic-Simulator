@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dinosaur Cinematic Simulator</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="viewport"></canvas>
+      <aside id="hud">
+        <strong>Dinosaur Cinematic Simulator</strong>
+        <span id="status">Loading execution plan…</span>
+        <div class="controls">
+          <button id="play" type="button">Play</button>
+          <button id="restart" type="button">Restart</button>
+        </div>
+        <span id="time">00:00.0</span>
+      </aside>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

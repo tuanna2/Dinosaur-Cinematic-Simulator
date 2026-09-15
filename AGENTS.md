@@ -11,10 +11,11 @@ Use deterministic code whenever the expected result can be specified exactly. Us
 Before changing architecture or content, read:
 
 1. `docs/ARCHITECTURE.md`
-2. `schemas/scenario.schema.json`
-3. `config/asset_catalog.json`
-4. `knowledge/dinosaur-behavior.md`
-5. `knowledge/cinematic-language.md`
+2. `docs/THREEJS_EXECUTION_CONTRACT.md`
+3. `schemas/scenario.schema.json`
+4. `config/asset_catalog.json`
+5. `knowledge/dinosaur-behavior.md`
+6. `knowledge/cinematic-language.md`
 
 Role-specific agents must also read their matching file in `agents/`.
 
@@ -29,12 +30,13 @@ Do not call an LLM for these operations:
 - weather/time preset application once the preset exists
 - animation playback once an animation ID is resolved
 - camera preset application once defined
-- Level Sequence track generation from an execution plan
-- Movie Render Queue invocation
+- execution-plan compilation
+- Three.js runtime-bundle export
+- browser playback of an approved execution plan
 - frame/video post-processing
 - file/path validation
 
-The pipeline entry point for these checks is `pipeline/preflight.py`.
+The pipeline entry point for checks is `pipeline/preflight.py`; the web export entry point is `pipeline/export_web_bundle.py`.
 
 ## AI-only or AI-preferred responsibilities
 
@@ -52,31 +54,50 @@ AI may be used for:
 
 - Reuse approved master assets before creating new ones.
 - Address assets through logical IDs in `config/asset_catalog.json`.
-- Do not hard-code random Blender filenames or Unreal content paths into scenarios.
+- Do not hard-code random Blender filenames into scenarios.
+- Browser-ready GLB/GLTF assets use the catalog `web_path` field.
 - Dinosaur master assets must be reusable, rigged, and animation-compatible.
 - Generated one-off assets should not silently become masters; register them explicitly.
+- Placeholder meshes in the web runtime are development aids, not approved master assets.
 
 ## Blender
 
-The bootstrap workstation uses Blender 5.2.1. Prefer Python (`bpy`) or a stable tool/MCP interface for repeatable changes. Save editable `.blend` sources and export engine-ready assets separately.
+The bootstrap workstation uses Blender 5.2.1. Prefer Python (`bpy`) or a stable tool/MCP interface for repeatable changes. Save editable `.blend` sources and export engine-ready GLB/GLTF separately.
 
-## Unreal
+## Three.js runtime
 
-The exact installed Unreal Engine version must be detected on the workstation and documented before committing version-sensitive engine code. Prefer stable core code for scenario execution and editor scripting for repeatable Sequencer/MRQ construction. Avoid workflows that require manual editor clicking for routine production.
+Three.js + TypeScript + Vite is the default engine/runtime. Routine production must not require Unreal Engine.
 
-## Required workflow before Unreal execution
+Before changing runtime semantics, preserve compatibility with `execution_plan.json`. Favor small reusable systems for:
+
+- logical asset loading
+- actor/group lookup
+- steering/behavior
+- animation state
+- camera presets
+- environment/weather
+- capture hooks
+
+Do not move creative interpretation into the render loop.
+
+## Optional Unreal backend
+
+Unreal may be added later as an optional high-end renderer. If implemented, it must consume the same execution plan and must not become a dependency for the normal browser workflow.
+
+## Required workflow before production playback
 
 Run:
 
 ```bash
 python3 pipeline/preflight.py scenarios/<scenario_id>/scenario.json
+python3 pipeline/export_web_bundle.py scenarios/<scenario_id>/scenario.json
 ```
 
-A scenario with `missing_assets` is not render-ready. Missing assets may be sent to the appropriate AI agent. A `ready` result may proceed without an AI agent.
+A scenario with `missing_assets` is not production-ready, although the web runtime may still use visible placeholders during bootstrap development. A `ready` result can proceed without an AI agent.
 
 ## Change discipline
 
 - Preserve schema compatibility unless intentionally bumping the schema version.
 - Add tests for deterministic pipeline changes.
-- Keep generated caches, Unreal build outputs, Blender autosaves, and rendered frames out of Git unless explicitly required.
+- Keep generated caches, node modules, browser build outputs, Blender autosaves, large GLBs and rendered frames out of Git unless explicitly required.
 - Never copy Jurassic World/JWE proprietary models, logos, audio, UI, or other copyrighted game assets into this repository.

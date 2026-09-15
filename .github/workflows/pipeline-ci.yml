@@ -13,7 +13,7 @@ permissions:
 jobs:
   deterministic-pipeline:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,3 +51,24 @@ jobs:
             /tmp/preflight/raptor_hunt_001/preflight.json \
             --output /tmp/preflight/raptor_hunt_001/agent_requests.json
           python -m json.tool /tmp/preflight/raptor_hunt_001/agent_requests.json > /dev/null
+
+      - name: Export Three.js runtime bundle
+        run: |
+          python pipeline/export_web_bundle.py scenarios/raptor_hunt_001/scenario.json
+          python -m json.tool web/public/runtime/execution_plan.json > /dev/null
+          python -m json.tool web/public/runtime/asset_manifest.json > /dev/null
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package.json
+
+      - name: Install web dependencies
+        working-directory: web
+        run: npm install --no-audit --no-fund
+
+      - name: Build Three.js runtime
+        working-directory: web
+        run: npm run build

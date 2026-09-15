@@ -8,6 +8,13 @@ venv/
 # Deterministic pipeline outputs
 build/
 
+# Web runtime
+web/node_modules/
+web/dist/
+web/public/runtime/
+web/public/assets/
+npm-debug.log*
+
 # Blender
 *.blend1
 *.blend2
@@ -15,7 +22,7 @@ build/
 *.blend~
 *.autosave
 
-# Unreal Engine
+# Optional Unreal Engine backend
 Binaries/
 Build/
 DerivedDataCache/
@@ -34,6 +41,9 @@ Saved/
 renders/
 frames/
 *.exr
+
+# Large/generated asset staging
+exports/
 
 # OS/editor
 .DS_Store

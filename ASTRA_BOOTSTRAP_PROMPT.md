@@ -1,6 +1,6 @@
 # Astra Bootstrap Prompt
 
-Use this prompt after cloning the repository on the workstation that has Blender 5.2.1 and Unreal Engine installed.
+Use this prompt after cloning the repository on the workstation that has Blender 5.2.1 installed.
 
 ---
 
@@ -11,7 +11,7 @@ Read these files first and follow them as contracts:
 - `AGENTS.md`
 - `docs/ARCHITECTURE.md`
 - `docs/PRODUCTION_WORKFLOW.md`
-- `docs/UNREAL_EXECUTION_CONTRACT.md`
+- `docs/THREEJS_EXECUTION_CONTRACT.md`
 - `agents/director.md`
 - `agents/asset-designer.md`
 - `agents/animation-director.md`
@@ -24,225 +24,274 @@ Read these files first and follow them as contracts:
 - `schemas/asset_catalog.schema.json`
 - `config/asset_catalog.json`
 - `scenarios/raptor_hunt_001/scenario.json`
+- `web/src/engine/*`
 
 Local environment:
 
 - Blender version: 5.2.1
-- Unreal Engine: detect the installed UE5 version and use it; document the exact version in the repo.
+- Primary runtime: Three.js + TypeScript + Vite in `web/`
+- Unreal Engine is NOT required for this bootstrap.
 - Do not replace deterministic pipeline steps with LLM calls.
 
-## Before changing Unreal or Blender
+## First run
 
 From the repository root run:
 
 ```bash
 python3 -m unittest discover -s tests -v
 python3 pipeline/preflight.py scenarios/raptor_hunt_001/scenario.json
+python3 pipeline/export_web_bundle.py scenarios/raptor_hunt_001/scenario.json
+cd web
+npm install
+npm run build
+npm run dev
 ```
 
-The initial preflight is expected to report `missing_assets` because the master asset library has not been bootstrapped yet.
-
-The Unreal runtime must consume the compiled `execution_plan.json` contract instead of asking an LLM to reinterpret story prose or scenario JSON at runtime.
+Open the browser runtime and inspect it before changing architecture. The current bootstrap intentionally uses obvious placeholder dinosaurs when approved GLB assets are absent.
 
 ## Objective
 
-Bootstrap a reusable cinematic dinosaur simulator whose first executable vertical slice is `raptor_hunt_001`.
+Turn the existing lightweight runtime into a reusable cinematic dinosaur simulator whose first visual vertical slice is `raptor_hunt_001`.
 
-The simulator is primarily a video-production engine, not a park-management game. Prioritize cinematic quality, reusable dinosaur assets, behavior, camera control, Sequencer automation and Movie Render Queue.
+The product is primarily a video-production simulator, not a park-management game. Prioritize:
 
-## Work in this order
+- visual quality
+- reusable dinosaur master assets
+- reusable animation library
+- fast browser iteration
+- deterministic scenario execution
+- cinematic cameras
+- rainforest/weather atmosphere
+- visual QA loops
+- browser-based capture hooks
 
-### 1. Detect and document Unreal
-
-Detect the actual installed Unreal Engine 5 version before creating version-sensitive source files. Record the exact version and platform in the repository setup documentation.
-
-### 2. Unreal project
-
-Create the Unreal project under `unreal/DinosaurCinematicSimulator/`.
-
-Enable/configure the minimum required UE plugins/features for:
-
-- Sequencer
-- Movie Render Queue / Movie Render Pipeline
-- Control Rig
-- PCG
-- Navigation
-- Python Editor Script Plugin if useful for deterministic editor automation
-
-Do not enable unrelated plugins.
-
-### 3. Director runtime/API
-
-Implement `docs/UNREAL_EXECUTION_CONTRACT.md`.
-
-The production path is:
+## Architecture that must remain
 
 ```text
 scenario.json
-  -> pipeline/preflight.py
+  -> deterministic validation/compiler/preflight
   -> execution_plan.json
-  -> Unreal deterministic executor
+  -> Three.js runtime
+  -> browser preview
 ```
 
-Unreal must support at least:
+Do not ask an LLM to reinterpret the story at runtime.
 
-- consume compiled execution plans
-- load environment by logical asset ID
-- spawn all compiled actor instances by logical asset ID
-- stable actor lookup by `instance_id`
-- set registered weather/time presets
-- apply registered camera presets
-- execute registered action mappings
-- play named animation assets
-- build or populate a Level Sequence
-- render predictable low-resolution previews
-- invoke Movie Render Queue for final render
-- return machine-readable errors for unresolved/unsupported operations
+Astra is used to build or improve reusable assets/systems and to visually judge results, not to control every frame of normal playback.
 
-Prefer C++ for stable runtime/core types and Python/Editor scripting for editor automation where it simplifies Sequencer/MRQ generation. Blueprints may be used for content-facing configuration, but do not make the entire pipeline manual Blueprint wiring.
+## Work in this order
 
-### 4. Asset registry bridge
+### 1. Verify the existing Three.js runtime
 
-Implement deterministic lookup from logical IDs in `config/asset_catalog.json` to Unreal/Blender paths.
+Run it and preserve the current execution-plan contract.
 
-Logical IDs include:
+Confirm that the sample plan can:
 
-- `dino_trex_master`
-- `dino_velociraptor_master`
-- `dino_triceratops_master`
-- `env_tropical_rainforest`
-- `anim_*` IDs required by the example scenario
+- instantiate all actor instances including eight raptors
+- process camera events
+- process action events
+- play through the full timeline
+- use placeholders without crashing while real assets are missing
 
-The scenario and execution plan must never depend directly on random generated filenames.
+Fix runtime/compiler bugs you actually observe before expanding features.
 
-Do not casually edit catalog entries by hand. After an asset is actually created/imported and verified, register it with `pipeline/register_asset.py`, for example:
+### 2. Bootstrap Blender master assets
+
+Using Blender 5.2.1, create original reusable master assets for:
+
+- Tyrannosaurus rex
+- Velociraptor
+- Triceratops
+
+Do not copy Jurassic World/JWE proprietary assets.
+
+For each master:
+
+- anatomically coherent original mesh
+- clean reusable topology suitable for deformation
+- skeleton/rig
+- materials/textures
+- sensible real-world scale
+- GLB/GLTF export compatible with Three.js
+- editable `.blend` source retained under `blender/`
+
+Prefer scripted/repeatable Blender operations with `bpy` where practical.
+
+Do not repeatedly regenerate a dinosaur from zero after a usable master exists. Iterate the master.
+
+### 3. Required animation set
+
+Create or adapt the smallest reusable animation library required by `raptor_hunt_001`.
+
+At minimum satisfy all `anim_*` IDs referenced by the sample scenario, including the equivalent motions for:
+
+- idle/graze
+- walk
+- run
+- stalk
+- react
+- defend
+- attack
+- flee
+- roar
+
+Keep actions reusable beyond one shot.
+
+Export animation-capable GLBs and verify animation clips in the Three.js runtime.
+
+### 4. Register assets deterministically
+
+Do not make the scenario depend on generated filenames.
+
+After an asset is actually created and verified, register it using `pipeline/register_asset.py` with logical IDs and `web_path`.
+
+Example:
 
 ```bash
 python3 pipeline/register_asset.py dino_trex_master \
   --type dinosaur \
   --status approved \
   --blender-source blender/dinosaurs/trex/trex_master.blend \
-  --export-path staging/dinosaurs/trex_master.glb \
-  --unreal-path /Game/Dinosaurs/TRex/SK_TRex_Master \
+  --export-path exports/dinosaurs/trex_master.glb \
+  --web-path /assets/trex_master.glb \
   --species tyrannosaurus_rex
 ```
 
-Use `--replace` only for an intentional update of an existing logical asset.
+If files need to be copied into `web/public/assets/`, automate that step or use `pipeline/export_web_bundle.py --copy-assets` where appropriate.
 
-### 5. Bootstrap assets in Blender 5.2.1
+### 5. Upgrade runtime asset/animation playback
 
-Because the catalog is initially empty, create the first reusable master assets needed by `raptor_hunt_001`:
+Extend the existing Three.js runtime rather than replacing it.
 
-- Tyrannosaurus rex
-- Velociraptor
-- Triceratops
-- tropical rainforest environment kit
+Implement reusable systems for:
 
-Create reusable masters, not shot-specific meshes.
+- GLB loading by logical asset ID
+- skinned clone reuse for pack members
+- AnimationMixer per dinosaur instance
+- action -> registered animation mapping
+- smooth animation transitions
+- stable actor/group lookup
+- deterministic fallback when an animation is still missing
 
-For each dinosaur create a clean skeletal asset and the smallest useful animation set required to execute the scenario. At minimum satisfy every animation ID referenced by `raptor_hunt_001`.
+Do not embed story-specific logic into dinosaur model files.
 
-Use Blender Python (`bpy`) for repeatable operations where practical. Preserve `.blend` source files under `blender/` and exported runtime assets under a documented import staging directory.
+### 6. Environment vertical slice
 
-Do not repeatedly regenerate a dinosaur from scratch. Once a usable master exists, iterate that master.
+Create an original tropical rainforest suitable for the sample scenario:
 
-### 6. Environment
-
-Create a tropical rainforest vertical-slice environment with:
-
-- dense jungle
+- dense jungle zone
 - jungle edge
 - open grassland
-- rain
 - wet ground
-- atmospheric depth/fog
+- atmospheric fog/depth
+- heavy rain
+- vegetation variation
+- rocks/logs/ground clutter
 
-Use reusable vegetation/rock modules and UE PCG where appropriate. Optimize for cinematic framing and reasonable preview performance.
+Optimize for browser rendering. Prefer reusable modules, instancing, LOD where useful, texture compression and sensible draw-call budgets.
 
-### 7. Dinosaur behavior
+The visual target should feel like a polished dinosaur documentary/game scene while remaining fast enough for iterative browser preview.
 
-Implement only enough autonomous behavior for the vertical slice:
+### 7. Behavior layer
 
-- idle
-- wander
-- orient/detect target
-- stalk/chase
+Upgrade the current basic steering into reusable dinosaur behavior sufficient for the vertical slice:
+
+- idle/wander
+- orient to target
+- stalk
+- chase
 - flee
+- pack spacing
+- attack trigger/range
 - threat/reaction
-- attack trigger
 
-The scenario/director must be able to override autonomous behavior for deterministic cinematic shots.
+Scenario events must be able to override autonomous behavior for cinematic determinism.
 
-### 8. Cameras and Sequencer
+Do not build park-management systems.
 
-Implement the initial registered camera presets required by `docs/UNREAL_EXECUTION_CONTRACT.md` and the example scenario:
+### 8. Cinematic cameras
 
-- aerial_establishing
-- static_hide
-- medium_tracking
-- low_threat_reveal
-- wide_observational
-- long_lens_observation
+Preserve and improve these registered presets:
 
-Generate a Level Sequence from `execution_plan.json`; do not hand-author the full scenario timeline.
+- `aerial_establishing`
+- `static_hide`
+- `medium_tracking`
+- `low_threat_reveal`
+- `wide_observational`
+- `long_lens_observation`
 
-### 9. Preview and visual QA hooks
+Add smooth movement/tracking where it improves the shot, but keep each preset deterministic once registered.
 
-Provide a command or documented procedure that:
+### 9. Dream-loop style visual iteration
 
-1. runs deterministic preflight
-2. refuses to render if required assets/presets remain unresolved
-3. builds/opens the Unreal scenario from the compiled execution plan
-4. renders representative preview frames or a low-resolution preview
-5. writes outputs to predictable scenario-specific paths
+For representative shots:
 
-Recommended layout:
+1. run the browser scene
+2. capture screenshots
+3. compare the result against a strong target/concept image or explicit visual goals
+4. identify concrete differences in composition, scale, lighting, atmosphere, materials, environment density and animation readability
+5. modify Blender assets or Three.js systems
+6. run again
+
+Do not merely generate source code and declare the visual work complete. Actually inspect browser output.
+
+### 10. Capture hooks
+
+Add a deterministic browser capture path suitable for later automation.
+
+The long-term pipeline should support:
 
 ```text
-build/<scenario_id>/
-  execution_plan.json
-  preview/
-    shot_001.png
-    shot_002.png
-    ...
+execution plan
+  -> browser runtime
+  -> fixed-resolution/fixed-FPS capture
+  -> frames/video
+  -> FFmpeg
 ```
 
-Prepare a machine-readable place for visual-critic patches, but do not require an AI call for normal execution.
+Do not require interactive manual screen recording as the final architecture.
 
-### 10. Final render
+### 11. Close bootstrap gaps
 
-Configure Movie Render Queue for the scenario render settings. For the example scenario target 3840x2160 at 60 fps for final output, while preview uses the scenario `preview_scale` setting.
-
-### 11. Close the bootstrap gaps
-
-After creating/importing/registering the masters and required animations, rerun:
+After registering the required reusable assets/animations, rerun:
 
 ```bash
 python3 pipeline/preflight.py scenarios/raptor_hunt_001/scenario.json
+python3 pipeline/export_web_bundle.py scenarios/raptor_hunt_001/scenario.json --copy-assets
 ```
 
-The bootstrap asset phase is not complete until preflight reports `ready`.
+The real asset bootstrap is not complete until preflight reports `ready`.
 
-### 12. Documentation and verification
+### 12. Verification
 
-Add/update:
+Before completion:
 
-- exact local prerequisites
-- Unreal version used
-- Blender/Unreal asset import conventions
-- how to run preflight
-- how to register assets
-- how to build/open the Unreal project
-- how to execute `raptor_hunt_001`
-- how to render preview
-- how to render final
+- run Python unit tests
+- run preflight
+- run web bundle export
+- run TypeScript/Vite production build
+- actually open/run the browser runtime
+- actually open/run Blender for asset work
+- verify GLB loading and animations
+- verify representative camera shots visually
+- document any remaining missing assets or visual defects honestly
 
-Run every deterministic validation/test you can run locally. Actually open/run Blender and Unreal for their respective verification steps. Do not claim Blender/Unreal steps succeeded unless you executed them.
+Do not claim a Blender/browser visual step succeeded unless it was actually executed.
 
 ## Important architecture rule
 
-If a step can be reproduced exactly with code/config, implement it as code/config. Use AI reasoning only for creative or visual tasks such as initial asset design, animation repair, cinematic direction and visual criticism.
+If a step can be reproduced exactly with code/config, implement it as code/config. Use AI reasoning only for creative/visual tasks such as initial asset design, animation repair, cinematic direction and visual criticism.
 
 ## Completion criteria
 
-The bootstrap is complete when a fresh clone on the configured workstation can run deterministic preflight, resolve all required logical asset IDs, feed the compiled execution plan to Unreal, generate the `raptor_hunt_001` Level Sequence, and produce a preview render without manually rebuilding the scene shot-by-shot.
+The bootstrap is complete when a fresh clone with Blender 5.2.1 and Node.js can:
+
+1. run deterministic tests/preflight
+2. export the web runtime bundle
+3. start the Three.js simulator
+4. load the registered dinosaur/environment assets by logical ID
+5. execute `raptor_hunt_001` without manually rebuilding the scene shot-by-shot
+6. display the real dinosaurs with the required animations and cinematic cameras
+7. produce a repeatable preview/capture path
+
+Unreal is optional future work and is not part of this bootstrap.

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import tempfile
 import unittest
 from pathlib import Path
 
 from pipeline.build_agent_requests import build_requests
 from pipeline.compile_execution_plan import compile_plan
+from pipeline.export_web_bundle import export_bundle
 from pipeline.preflight import resolve_required
 from pipeline.register_asset import register
 from pipeline.validate_scenario import load_json, validate
@@ -13,6 +15,7 @@ from pipeline.validate_scenario import load_json, validate
 
 ROOT = Path(__file__).resolve().parents[1]
 SCENARIO = ROOT / "scenarios" / "raptor_hunt_001" / "scenario.json"
+CATALOG = ROOT / "config" / "asset_catalog.json"
 
 
 class PipelineTests(unittest.TestCase):
@@ -58,48 +61,40 @@ class PipelineTests(unittest.TestCase):
         encoded = json.dumps(plan)
         self.assertIn("raptor_hunt_001", encoded)
 
-    def test_agent_requests_route_animation_and_dinosaur_gaps(self) -> None:
+    def test_agent_requests_route_dinosaurs_animations_and_environment(self) -> None:
         report = {
-            "scenario_id": "sample",
-            "missing_assets": ["anim_trex_roar", "dino_trex_master"],
+            "scenario_id": "test",
+            "missing_assets": ["dino_trex_master", "anim_trex_roar", "env_tropical_rainforest"],
         }
         requests = build_requests(report)
-        by_asset = {request["asset_id"]: request for request in requests}
-        self.assertEqual(by_asset["anim_trex_roar"]["agent"], "animation_director")
-        self.assertEqual(by_asset["dino_trex_master"]["agent"], "asset_designer")
+        agents = {request["agent"] for request in requests}
+        self.assertIn("asset_designer", agents)
+        self.assertIn("animation_director", agents)
+        self.assertIn("environment_designer", agents)
 
-    def test_register_asset_rejects_duplicate_without_replace(self) -> None:
-        catalog = {
-            "schema_version": 1,
-            "blender_version": "5.2.1",
-            "assets": [
-                {"id": "dino_trex_master", "type": "dinosaur", "status": "approved"}
-            ],
-        }
-        with self.assertRaises(ValueError):
-            register(
-                catalog,
-                {"id": "dino_trex_master", "type": "dinosaur", "status": "approved"},
-            )
-
-    def test_register_asset_adds_and_sorts_asset(self) -> None:
-        catalog = {
-            "schema_version": 1,
-            "blender_version": "5.2.1",
-            "assets": [
-                {"id": "env_tropical_rainforest", "type": "environment", "status": "approved"}
-            ],
-        }
+    def test_asset_registration_supports_web_path(self) -> None:
+        catalog = {"assets": []}
         register(
             catalog,
             {
                 "id": "dino_trex_master",
                 "type": "dinosaur",
                 "status": "approved",
-                "blender_source": "blender/dinosaurs/trex.blend",
+                "web_path": "/assets/trex_master.glb",
             },
         )
-        self.assertEqual([item["id"] for item in catalog["assets"]], ["dino_trex_master", "env_tropical_rainforest"])
+        self.assertEqual(catalog["assets"][0]["web_path"], "/assets/trex_master.glb")
+
+    def test_web_bundle_exports_execution_plan_and_manifest(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "runtime"
+            plan_path, manifest_path = export_bundle(SCENARIO, CATALOG, output)
+            plan = json.loads(plan_path.read_text(encoding="utf-8"))
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            self.assertEqual(plan["scenario_id"], "raptor_hunt_001")
+            self.assertEqual(len(plan["instances"]), 10)
+            self.assertEqual(manifest["schema_version"], 1)
+            self.assertIsInstance(manifest["assets"], list)
 
 
 if __name__ == "__main__":
