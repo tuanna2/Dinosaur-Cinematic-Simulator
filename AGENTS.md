@@ -16,6 +16,8 @@ Before changing architecture or content, read:
 4. `config/asset_catalog.json`
 5. `knowledge/dinosaur-behavior.md`
 6. `knowledge/cinematic-language.md`
+7. `docs/FLUX_LOOKDEV.md`
+8. `docs/VISUAL_CRITIQUE_WORKFLOW.md`
 
 Role-specific agents must also read their matching file in `agents/`.
 
@@ -33,6 +35,8 @@ Do not call an LLM for these operations:
 - execution-plan compilation
 - Three.js runtime-bundle export
 - browser playback of an approved execution plan
+- deterministic preview capture
+- packaging preview/look-dev inputs for visual critique
 - frame/video post-processing
 - file/path validation
 
@@ -44,11 +48,34 @@ AI may be used for:
 
 - story brief -> scenario design
 - shot and camera composition decisions
-- creation of a missing dinosaur/environment/prop master asset
+- FLUX look-development target generation
+- creation/refinement of a missing dinosaur/environment/prop master asset
 - rigging or animation adaptation when no reusable clip exists
-- visual critique of preview renders
+- visual critique of preview renders against scenario intent and optional FLUX targets
 - repairing a shot whose visual result fails quality targets
 - designing a new reusable behavior or cinematic preset when the existing library cannot express the intent
+
+## FLUX look-development policy
+
+The default local image model is `x/flux-klein:4b` through Ollama CLI.
+
+FLUX is advisory only:
+
+- scenario semantics and deterministic Three.js staging remain authoritative
+- never use a FLUX frame directly as a final video frame
+- never reproduce hallucinated extra animals/props merely because they appear in a target
+- use the target to expose realism gaps in anatomy, materials, environment, atmosphere, lighting and visual hierarchy
+- route reusable mesh/material/rig/animation defects back to Blender master assets
+
+Prepare a review with:
+
+```bash
+python3 pipeline/run_lookdev_loop.py \
+  scenarios/<scenario_id>/scenario.json \
+  --shot-id <shot_id>
+```
+
+Then read the generated package under `build/critique/<scenario_id>/` together with `agents/visual-critic.md`.
 
 ## Asset policy
 
@@ -59,10 +86,13 @@ AI may be used for:
 - Dinosaur master assets must be reusable, rigged, and animation-compatible.
 - Generated one-off assets should not silently become masters; register them explicitly.
 - Placeholder meshes in the web runtime are development aids, not approved master assets.
+- Do not spend repeated iterations adding micro-detail to a master that still fails anatomy, topology continuity or locomotion quality.
 
 ## Blender
 
 The bootstrap workstation uses Blender 5.2.1. Prefer Python (`bpy`) or a stable tool/MCP interface for repeatable changes. Save editable `.blend` sources and export engine-ready GLB/GLTF separately.
+
+For visual-quality work, prioritize structural corrections in this order: anatomy/silhouette/body mass -> topology continuity -> rig/deformation/locomotion -> interaction geography -> environment/camera -> materials/lighting -> micro-detail.
 
 ## Three.js runtime
 
