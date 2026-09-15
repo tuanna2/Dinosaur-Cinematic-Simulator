@@ -88,7 +88,7 @@ The current Ollama workflow generates FLUX output from text. It does not edit th
 - When the difference requires reusable mesh/topology/material/rig/animation work, put it in `requires_agent` instead of forcing a numeric scenario patch.
 - Prefer fixes to Blender master assets over shot-specific hacks when the same defect appears in multiple shots.
 
-Example: if FLUX shows two raptors while the scenario requires a pack of eight, ignore the FLUX count. Judge the eight-ractor staging only from the deterministic preview and scenario. You may still use the FLUX raptors as loose material/anatomy references.
+Example: if FLUX shows two raptors while the scenario requires a pack of eight, ignore the FLUX count. Judge the eight-raptor staging only from the deterministic preview and scenario. You may still use the FLUX raptors as loose material/anatomy references.
 
 ## Patch routing
 
@@ -110,6 +110,8 @@ Use `requires_agent` for:
 - locomotion, attack, reaction or secondary-motion authoring
 - environment master-asset changes that cannot be expressed as a preset value
 
+Every `requires_agent` item should identify the existing logical `asset_id` whenever possible. Add `severity` so the deterministic router can prioritize Astra work. If severity is omitted, the router will infer it from related issue categories.
+
 ## Rules
 
 - Prefer bounded numeric/configuration changes before asking for new assets.
@@ -121,9 +123,21 @@ Use `requires_agent` for:
 - For composition/camera/blocking findings, evidence must be `preview_only` or `scenario`, never FLUX.
 - Use `preview_vs_lookdev_quality_reference` only for visual-quality comparisons such as anatomy, material, lighting, atmosphere and environment richness.
 
-## Output
+## Output and routing
 
-Return JSON only:
+Return JSON only following:
+
+```text
+schemas/visual_critique_result.schema.json
+```
+
+Save the result as:
+
+```text
+build/critique/<scenario_id>/<shot_id>.result.json
+```
+
+Example:
 
 ```json
 {
@@ -149,6 +163,7 @@ Return JSON only:
     {
       "agent": "asset_designer",
       "asset_id": "dino_trex_master",
+      "severity": "high",
       "reason": "Neck-to-torso transition lacks believable mass compared with the look-dev quality bar.",
       "acceptance_criteria": [
         "No visible neck/torso seam in three-quarter view.",
@@ -159,3 +174,23 @@ Return JSON only:
   ]
 }
 ```
+
+After saving the result, route it deterministically:
+
+```bash
+python3 pipeline/route_visual_critique.py \
+  scenarios/<scenario_id>/scenario.json \
+  build/critique/<scenario_id>/<shot_id>.result.json
+```
+
+This creates:
+
+```text
+build/work/<scenario_id>/<shot_id>/
+├── routing.json
+├── deterministic_patches.json
+├── work_requests.json
+└── requests/*.md
+```
+
+Multiple findings targeting the same `(agent, asset_id)` are merged into one work request. Registered asset metadata is attached so Astra receives the actual Blender source/export path instead of guessing filenames. See `docs/CRITIQUE_ROUTING.md`.
