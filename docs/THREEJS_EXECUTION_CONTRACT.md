@@ -29,8 +29,8 @@ Scenarios use logical IDs. `config/asset_catalog.json` may map an approved asset
   "type": "dinosaur",
   "status": "approved",
   "blender_source": "blender/dinosaurs/trex_master.blend",
-  "export_path": "exports/dinosaurs/trex_master.glb",
-  "web_path": "/assets/trex_master.glb"
+  "export_path": "web/public/assets/dinosaurs/trex_master.glb",
+  "web_path": "/assets/dinosaurs/trex_master.glb"
 }
 ```
 
@@ -45,6 +45,7 @@ Each compiled instance has a stable `instance_id`, `group_id`, `asset_id` and sp
 3. resolve group IDs through `actor_groups`
 4. clone reusable GLB templates rather than reloading the same file for every pack member
 5. keep scenario identity separate from mesh filenames
+6. expose behavior/animation state through machine-readable runtime snapshots
 
 ## Actions
 
@@ -59,7 +60,36 @@ Initial deterministic action families:
 - roar / victory_roar
 - attack
 
-During bootstrap the browser runtime may represent some actions with simple steering while the real animation library is incomplete. Once an animation is approved, action-to-animation mapping must be registered and reusable.
+Actions may include `offset_seconds` relative to their shot start. The compiler converts that offset into an absolute event timestamp. Offsets must remain inside the shot duration.
+
+This allows actions inside one shot to be sequenced deterministically, for example:
+
+```json
+{
+  "id": "shot_005",
+  "start": 125,
+  "duration": 12,
+  "actions": [
+    {"actor": "trex_01", "action": "enter", "offset_seconds": 0},
+    {"actor": "trex_01", "action": "roar", "offset_seconds": 6}
+  ]
+}
+```
+
+The runtime uses `THREE.AnimationMixer` per dinosaur instance. Approved animations may be embedded in the master GLB or provided as separate GLB animation assets. Locomotion clips loop; attack/defend/react/roar are treated as one-shots. Transitions cross-fade instead of hard-switching.
+
+## Behavior
+
+Scenario actions select deterministic behavior intents. The first runtime layer supports:
+
+- target-oriented stalk/chase/attack movement
+- flee/scatter/retreat movement
+- stable raptor-pack surround slots
+- local pack-member separation
+- smooth heading changes
+- scenario override of autonomous motion
+
+AI does not choose movement each frame.
 
 ## Camera
 
@@ -72,7 +102,7 @@ Camera events use reusable presets. The initial runtime supports:
 - `wide_observational`
 - `long_lens_observation`
 
-A preset is deterministic code/config. AI may design a new preset, but playback of an existing preset does not require AI.
+A preset is deterministic code/config. Camera changes smoothly converge to the registered offset/focal settings while tracking the target. AI may design a new preset, but playback of an existing preset does not require AI.
 
 ## Environment
 
@@ -80,12 +110,26 @@ The web runtime owns realtime scene setup including:
 
 - lighting
 - fog/atmosphere
-- terrain/ground
-- vegetation placement or instancing
-- weather effects
-- water/shaders when required
+- deterministic rain particles
+- time-of-day presets
+- placeholder terrain/vegetation before the real environment GLB exists
 
-Environment assets should be modular and optimized for browser playback. Repeated vegetation should use instancing where practical.
+When a registered environment GLB is available, the placeholder world is hidden automatically while runtime weather/lighting remain active.
+
+## Deterministic time control
+
+The browser runtime must support exact timeline control independent of realtime browser speed:
+
+```js
+window.dinosaurRuntime.pause()
+window.dinosaurRuntime.seek(42.5)
+window.dinosaurRuntime.stepFrame()
+window.dinosaurRuntime.renderFrameAt(90)
+window.dinosaurRuntime.snapshot()
+window.dinosaurRuntime.captureDataUrl()
+```
+
+`seek()` reconstructs state from time zero using fixed simulation steps derived from scenario FPS. This is intentionally slower than normal playback but repeatable and suitable for capture/QA.
 
 ## Development loop
 
@@ -94,15 +138,32 @@ scenario.json
   -> export_web_bundle.py
   -> Vite / Three.js
   -> browser preview
-  -> screenshot/video capture
+  -> deterministic shot screenshots
   -> optional visual critic
-  -> deterministic patch
+  -> deterministic scenario/preset/asset patch
 ```
 
 The fast browser loop is the default production path.
 
+## Preview capture
+
+The web package includes a system-Chrome capture command:
+
+```bash
+cd web
+npm run capture:preview
+```
+
+It starts Vite, opens the runtime headlessly, seeks to the midpoint of every camera shot and saves one PNG per shot under:
+
+```text
+build/preview/<scenario_id>/
+```
+
+This output is intended for visual QA and Dream-Loop-style criticism. Set `CHROME_BIN` when Chrome/Chromium is not at a standard path.
+
 ## Final capture
 
-Initial final output may be captured from the browser runtime at the requested aspect/FPS using a deterministic capture tool added later to the pipeline. Offline FFmpeg post-processing remains downstream.
+Final long-form fixed-FPS frame/video capture remains a separate production stage. It should consume the same deterministic browser APIs rather than rely on interactive screen recording. FFmpeg post-processing remains downstream.
 
 A future high-end backend such as Unreal may consume the same `execution_plan.json`, but it is optional and must not change scenario semantics.
