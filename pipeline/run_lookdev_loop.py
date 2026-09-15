@@ -11,7 +11,7 @@ from typing import Sequence
 
 ROOT = Path(__file__).resolve().parents[1]
 WEB_ROOT = ROOT / "web"
-DEFAULT_MODEL = "x/flux-klein:4b"
+DEFAULT_MODEL = "x/flux-klein"
 
 
 def command_text(command: Sequence[str]) -> str:
