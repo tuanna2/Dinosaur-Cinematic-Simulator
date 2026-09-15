@@ -17,7 +17,7 @@ See `AGENTS.md` for repository-wide agent rules.
 - Three.js + TypeScript + Vite: primary realtime runtime and fast preview engine.
 - Blender 5.2.1: reusable dinosaur/environment master assets exported as GLB/GLTF and future final cinematic rendering.
 - Ollama + FLUX Klein: optional local photorealistic look-development targets from deterministic shot previews.
-- Python standard library: deterministic scenario compiler, preflight, asset resolution, bundle export, and FLUX look-dev orchestration.
+- Python standard library: deterministic scenario compiler, preflight, asset resolution, bundle export, look-dev orchestration and visual-critique packaging.
 - System Chrome/Chromium + `playwright-core`: deterministic shot-preview capture.
 - `agents/*.md`: specialized AI role contracts.
 - `knowledge/*.md`: reusable dinosaur/cinematic knowledge.
@@ -145,7 +145,45 @@ build/lookdev/<scenario_id>/
 
 Generate all shots by omitting `--shot-id`.
 
-See `docs/FLUX_LOOKDEV.md` for provider details, reference-image caveats and workflow guidance.
+See `docs/FLUX_LOOKDEV.md` for provider details and reference-image caveats.
+
+## 6. Build a visual-critic package
+
+The preferred workflow is now one command:
+
+```bash
+python3 pipeline/run_lookdev_loop.py \
+  scenarios/raptor_hunt_001/scenario.json \
+  --shot-id shot_005
+```
+
+It runs the deterministic export/capture, generates the local FLUX target and packages the comparison for Astra/visual critic.
+
+Outputs include:
+
+```text
+build/preview/raptor_hunt_001/shot_005.png
+build/lookdev/raptor_hunt_001/shot_005.png
+build/lookdev/raptor_hunt_001/shot_005.prompt.txt
+build/lookdev/raptor_hunt_001/shot_005.json
+build/critique/raptor_hunt_001/shot_005.json
+build/critique/raptor_hunt_001/shot_005.request.md
+```
+
+The critique package explicitly keeps scenario semantics and deterministic Three.js staging as source-of-truth. FLUX is only a realism/look target. Structural mesh/material/rig/animation defects are routed to reusable Blender asset work; camera, placement, lighting and preset defects can remain deterministic patches.
+
+To regenerate only critique packaging from existing files:
+
+```bash
+python3 pipeline/run_lookdev_loop.py \
+  scenarios/raptor_hunt_001/scenario.json \
+  --shot-id shot_005 \
+  --skip-export \
+  --skip-capture \
+  --skip-lookdev
+```
+
+See `docs/VISUAL_CRITIQUE_WORKFLOW.md` and `agents/visual-critic.md`.
 
 ## Blender asset workflow
 
@@ -201,6 +239,7 @@ See:
 - `docs/ARCHITECTURE.md`
 - `docs/BLENDER_ASSET_CONTRACT.md`
 - `docs/FLUX_LOOKDEV.md`
+- `docs/VISUAL_CRITIQUE_WORKFLOW.md`
 
 ## Astra bootstrap
 
@@ -208,7 +247,7 @@ After cloning this repository on the workstation with Blender 5.2.1, give Astra 
 
 `ASTRA_BOOTSTRAP_PROMPT.md`
 
-Astra should focus on visual factory-building: create and refine reusable dinosaur/environment masters, rigs, textures and missing animations, export/register GLBs, run the existing browser runtime, generate optional FLUX look-dev targets, inspect captured shot previews and iterate visual quality. The deterministic engine/runtime should be extended only when an actual reusable capability is missing.
+Astra should focus on visual factory-building: create/refine reusable dinosaur/environment masters, rigs, textures and missing animations, export/register GLBs, run the deterministic browser runtime, generate FLUX look-dev targets, consume critique packages and iterate actual 3D quality. The deterministic engine/runtime should be extended only when an actual reusable capability is missing.
 
 ## IP policy
 
