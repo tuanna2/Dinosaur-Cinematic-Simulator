@@ -1,6 +1,6 @@
 # Astra Visual Bootstrap Prompt
 
-Use this prompt on the workstation that has Blender 5.2.1, Node.js and Google Chrome/Chromium installed.
+Use this prompt on the workstation that has Blender 5.2.1, Node.js, Google Chrome/Chromium, Ollama and the local FLUX model installed.
 
 ---
 
@@ -15,6 +15,8 @@ Treat these repository files as contracts:
 - `docs/PRODUCTION_WORKFLOW.md`
 - `docs/THREEJS_EXECUTION_CONTRACT.md`
 - `docs/BLENDER_ASSET_CONTRACT.md`
+- `docs/FLUX_LOOKDEV.md`
+- `docs/VISUAL_CRITIQUE_WORKFLOW.md`
 - `agents/asset-designer.md`
 - `agents/animation-director.md`
 - `agents/environment-designer.md`
@@ -30,6 +32,7 @@ Local baseline:
 - Blender: 5.2.1
 - Runtime: Three.js + TypeScript + Vite
 - Browser: Chrome/Chromium
+- Local look-dev: Ollama + `x/flux-klein:4b`
 - Unreal Engine is not required.
 
 ## Architecture rule
@@ -52,6 +55,8 @@ The repository already implements:
 - rain/fog/time-of-day runtime
 - timeline seek / frame stepping / runtime snapshots
 - deterministic browser shot-preview capture
+- local FLUX look-development target generation
+- visual-critique package generation
 - repeatable Blender GLB export helper
 
 Do not rewrite those systems unless you actually reproduce a defect or a missing reusable capability.
@@ -70,17 +75,25 @@ npm run build
 npm run dev
 ```
 
-Inspect the current placeholder runtime in the browser before creating assets.
+Confirm local FLUX separately:
+
+```bash
+ollama run x/flux-klein:4b "a photorealistic tyrannosaurus rex in a wet prehistoric rainforest"
+```
+
+Inspect the current runtime in the browser before creating or changing assets.
 
 ## Main objective
 
-Replace the visual placeholders with original reusable assets and improve visual quality until `raptor_hunt_001` is a convincing documentary-cinematic dinosaur vertical slice.
+Improve the actual reusable 3D assets and motion until `raptor_hunt_001` is a convincing documentary-cinematic dinosaur vertical slice.
 
 Your primary responsibility is graphics/visual asset production, not engine architecture.
 
-## 1. Create reusable dinosaur masters in Blender 5.2.1
+Do not confuse a beautiful FLUX target image with completed 3D work. FLUX is a visual-direction tool only; completion must be demonstrated by the real Blender/GLB scene and deterministic captures.
 
-Create original master assets for:
+## 1. Improve reusable dinosaur masters in Blender 5.2.1
+
+Maintain reusable master assets for:
 
 - Tyrannosaurus rex
 - Velociraptor
@@ -91,19 +104,24 @@ Do not copy Jurassic World/JWE proprietary assets.
 Each master must have:
 
 - coherent dinosaur anatomy
+- convincing silhouette and body mass
 - reusable deformation-friendly topology
+- continuous neck/hip/tail/joint transitions
 - stable armature/bone names
-- skinning
-- materials/textures
+- skinning with believable deformation
+- materials/textures with physically plausible response
+- convincing eyes, teeth, gums and oral tissue where visible
 - correct apparent scale relative to the other species
 - editable `.blend` source under `blender/`
 - GLB export conforming to `docs/BLENDER_ASSET_CONTRACT.md`
 
 Use `blender/export_glb.py` for repeatable exports when practical.
 
-Do not regenerate a master from scratch after it becomes usable. Iterate the same master.
+Do not regenerate a usable master from scratch every iteration. Improve the same versioned master/candidate and preserve editable history.
 
-## 2. Create the required animation library
+Do not spend repeated iterations on tiny scales, scars or color polish while anatomy, silhouette, topology continuity or locomotion still fail.
+
+## 2. Improve the required animation library
 
 Satisfy every `anim_*` ID required by `raptor_hunt_001`.
 
@@ -119,9 +137,11 @@ Animations may be embedded in master GLBs or exported as compatible separate ani
 
 Actually verify clips through the existing Three.js `AnimationMixer` runtime.
 
-## 3. Create the tropical rainforest environment
+Prioritize believable weight transfer, grounded feet, pelvis/center-of-mass motion, turns, attack follow-through and neck/tail secondary motion over decorative motion.
 
-Create an original browser-optimized environment that supports:
+## 3. Improve the tropical rainforest environment
+
+Maintain an original browser-optimized environment that supports:
 
 - dense rainforest
 - jungle edge
@@ -161,7 +181,7 @@ The scenario supports per-action `offset_seconds` within shots.
 
 Do not manually re-author runtime behavior in JavaScript just to make one shot work. If timing needs adjustment, change the scenario data or a reusable preset.
 
-## 6. Visual iteration loop
+## 6. Deterministic visual iteration loop
 
 Repeatedly perform:
 
@@ -179,12 +199,14 @@ Blender asset change
 
 Judge at least:
 
-- dinosaur anatomy/silhouette
+- dinosaur anatomy/silhouette/body mass
 - scale relationships
+- topology and joint continuity
 - foot contact and skin deformation
+- locomotion and weight transfer
 - animation readability
 - actor separation/intersections
-- environment density
+- environment density/depth
 - fog/rain readability
 - lighting/material response
 - camera composition
@@ -192,11 +214,66 @@ Judge at least:
 
 Do not declare a visual task complete without looking at actual browser output.
 
-## 7. Dream-loop target images
+## 7. FLUX-assisted look-development and critique loop
 
-You may create strong target/concept frames to establish a visual bar, then compare the actual browser captures against them.
+Use the local model exactly through the repository integration. For a representative shot:
 
-Treat target images as direction, not as fake completion. The final deliverable must be the real Three.js scene using real GLB assets.
+```bash
+python3 pipeline/run_lookdev_loop.py \
+  scenarios/raptor_hunt_001/scenario.json \
+  --shot-id shot_005
+```
+
+This prepares:
+
+```text
+build/preview/raptor_hunt_001/shot_005.png
+build/lookdev/raptor_hunt_001/shot_005.png
+build/critique/raptor_hunt_001/shot_005.json
+build/critique/raptor_hunt_001/shot_005.request.md
+```
+
+Read the critique package and compare the deterministic preview with the FLUX target according to `agents/visual-critic.md`.
+
+FLUX policy:
+
+- scenario semantics and deterministic staging are authoritative
+- FLUX may guide realism, anatomy, material, lighting, atmosphere and visual hierarchy
+- ignore hallucinated extra animals, props or contradictory staging
+- never use a FLUX image directly as a final video frame
+- never claim FLUX output itself fixed the 3D model
+
+Route critique findings correctly:
+
+```text
+camera / placement / fog / lighting / density
+        -> deterministic patch
+
+anatomy / topology / material / rig / animation
+        -> reusable Blender asset work
+```
+
+Review in this order:
+
+```text
+anatomy / silhouette / body mass
+        ↓
+topology continuity
+        ↓
+locomotion / weight / foot contact
+        ↓
+interaction geography
+        ↓
+camera / composition
+        ↓
+environment depth
+        ↓
+lighting / materials
+        ↓
+micro detail / color polish
+```
+
+After changing a Blender master, export it, capture the same shot again and rebuild the critique package. Generate a fresh FLUX target only when the intended look itself changes materially.
 
 ## 8. Fix engine code only when justified
 
@@ -225,6 +302,8 @@ npm run capture:preview
 
 Actually inspect the captured PNGs.
 
+For representative hero/problem shots, also build critique packages and record unresolved high/blocking issues.
+
 The asset bootstrap is complete only when:
 
 - required logical dinosaur/environment/animation assets are registered
@@ -234,6 +313,7 @@ The asset bootstrap is complete only when:
 - `raptor_hunt_001` runs without manual shot rebuilding
 - preview capture works
 - representative shot captures have been visually reviewed
+- no blocking anatomy/topology/motion issue is hidden behind cosmetic detail
 - remaining visual defects are documented honestly
 
-Do not claim Blender/browser verification succeeded unless you actually executed it.
+Do not claim Blender/browser/FLUX verification succeeded unless you actually executed it.
