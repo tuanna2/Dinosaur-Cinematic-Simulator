@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 import tempfile
 import unittest
@@ -38,6 +39,24 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(plan["render"]["width"], 3840)
         self.assertEqual(plan["render"]["height"], 2160)
         self.assertEqual(plan["render"]["fps"], 60)
+
+    def test_action_offsets_compile_to_event_times(self) -> None:
+        plan = compile_plan(self.scenario)
+        shot_events = [
+            event
+            for event in plan["events"]
+            if event["type"] == "action" and event["shot_id"] == "shot_005"
+        ]
+        by_action = {(event["actor"], event["action"]): event for event in shot_events}
+        self.assertEqual(by_action[("trex_01", "enter")]["time"], 125.0)
+        self.assertEqual(by_action[("trex_01", "roar")]["time"], 131.0)
+        self.assertEqual(by_action[("raptor_pack", "react")]["time"], 131.0)
+
+    def test_action_offset_must_stay_inside_shot(self) -> None:
+        invalid = copy.deepcopy(self.scenario)
+        invalid["shots"][0]["actions"][0]["offset_seconds"] = invalid["shots"][0]["duration"]
+        errors = validate(invalid)
+        self.assertTrue(any("offset_seconds" in error for error in errors))
 
     def test_required_assets_include_animation_and_master_assets(self) -> None:
         plan = compile_plan(self.scenario)
