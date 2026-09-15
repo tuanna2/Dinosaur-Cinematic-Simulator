@@ -14,8 +14,10 @@ from pipeline.generate_lookdev import DEFAULT_MODEL as LOOKDEV_DEFAULT_MODEL
 from pipeline.generate_lookdev import build_prompt, find_shot
 from pipeline.preflight import resolve_required
 from pipeline.register_asset import register
+from pipeline.route_visual_critique import route_critique
 from pipeline.run_lookdev_loop import DEFAULT_MODEL as LOOP_DEFAULT_MODEL
 from pipeline.run_lookdev_loop import build_commands
+from pipeline.run_visual_iteration import critique_summary, decide_iteration, next_iteration_dir
 from pipeline.validate_scenario import load_json, validate
 
 
@@ -209,6 +211,78 @@ class PipelineTests(unittest.TestCase):
         self.assertIn("x/flux2-klein:4b", lookdev_command)
         self.assertIn("shot_005", lookdev_command)
         self.assertTrue(any(part.endswith("build_visual_critique_package.py") for part in package_command))
+
+    def test_visual_iteration_next_directory_is_monotonic(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            self.assertEqual(next_iteration_dir(root).name, "iteration_001")
+            (root / "iteration_001").mkdir()
+            (root / "iteration_003").mkdir()
+            self.assertEqual(next_iteration_dir(root).name, "iteration_004")
+
+    def test_visual_iteration_pass_requires_clean_routing(self) -> None:
+        critique = {
+            "shot_id": "shot_005",
+            "pass": True,
+            "issues": [],
+            "patches": [],
+            "requires_agent": [],
+        }
+        routing = route_critique(self.scenario, critique, {"assets": []})
+        decision = decide_iteration(critique, routing, None)
+        self.assertEqual(decision["state"], "PASS")
+        self.assertEqual(decision["trend"], "unknown")
+
+    def test_visual_iteration_blocking_request_blocks_pass(self) -> None:
+        critique = {
+            "shot_id": "shot_005",
+            "pass": False,
+            "issues": [
+                {
+                    "category": "anatomy",
+                    "severity": "blocking",
+                    "observation": "T-Rex hip continuity is visibly broken.",
+                    "evidence": "preview_only",
+                }
+            ],
+            "patches": [],
+            "requires_agent": [
+                {
+                    "agent": "asset_designer",
+                    "asset_id": "dino_trex_master",
+                    "severity": "blocking",
+                    "reason": "Repair hip continuity.",
+                    "acceptance_criteria": ["No visible hip seam."],
+                }
+            ],
+        }
+        catalog = {"assets": [{"id": "dino_trex_master", "type": "dinosaur"}]}
+        routing = route_critique(self.scenario, critique, catalog)
+        decision = decide_iteration(critique, routing, None)
+        self.assertEqual(decision["state"], "BLOCKED")
+        self.assertEqual(decision["routing"]["work_request_priorities"]["blocking"], 1)
+
+    def test_visual_iteration_reports_improvement_against_previous_critique(self) -> None:
+        before = critique_summary(
+            {
+                "pass": False,
+                "issues": [{"severity": "blocking"}, {"severity": "high"}],
+                "patches": [],
+                "requires_agent": [{"asset_id": "dino_trex_master"}],
+            }
+        )
+        critique = {
+            "shot_id": "shot_005",
+            "pass": False,
+            "issues": [{"category": "anatomy", "severity": "medium"}],
+            "patches": [],
+            "requires_agent": [],
+        }
+        routing = route_critique(self.scenario, critique, {"assets": []})
+        decision = decide_iteration(critique, routing, before)
+        self.assertEqual(decision["state"], "CONTINUE")
+        self.assertEqual(decision["trend"], "improved")
+        self.assertLess(decision["quality_delta"], 0)
 
 
 if __name__ == "__main__":
