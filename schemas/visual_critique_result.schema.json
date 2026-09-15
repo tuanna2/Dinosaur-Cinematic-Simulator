@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "visual_critique_result.schema.json",
+  "title": "Visual Critique Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "shot_id",
+    "pass",
+    "issues",
+    "patches",
+    "requires_agent"
+  ],
+  "properties": {
+    "shot_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "pass": {
+      "type": "boolean"
+    },
+    "issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "category",
+          "severity",
+          "observation",
+          "evidence"
+        ],
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "anatomy",
+              "material",
+              "animation",
+              "camera",
+              "lighting",
+              "environment",
+              "composition",
+              "continuity"
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "blocking"
+            ]
+          },
+          "observation": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "type": "string",
+            "enum": [
+              "preview_only",
+              "scenario",
+              "preview_vs_lookdev_quality_reference"
+            ]
+          }
+        }
+      }
+    },
+    "patches": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "path",
+          "operation",
+          "reason"
+        ],
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "operation": {
+            "type": "string",
+            "minLength": 1
+          },
+          "value": {},
+          "reason": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "requires_agent": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "agent",
+          "asset_id",
+          "reason",
+          "acceptance_criteria"
+        ],
+        "properties": {
+          "agent": {
+            "type": "string",
+            "enum": [
+              "asset_designer",
+              "animation_director",
+              "environment_designer"
+            ]
+          },
+          "asset_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "blocking"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1
+          },
+          "acceptance_criteria": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        }
+      }
+    }
+  }
+}
