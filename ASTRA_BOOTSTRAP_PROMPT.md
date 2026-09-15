@@ -18,6 +18,7 @@ Treat these repository files as contracts:
 - `docs/FLUX_LOOKDEV.md`
 - `docs/VISUAL_CRITIQUE_WORKFLOW.md`
 - `docs/CRITIQUE_ROUTING.md`
+- `docs/VISUAL_ITERATION_LOOP.md`
 - `agents/asset-designer.md`
 - `agents/animation-director.md`
 - `agents/environment-designer.md`
@@ -59,6 +60,7 @@ The repository already implements:
 - local FLUX look-development target generation
 - visual-critique package generation
 - deterministic critique routing into patches and reusable agent work requests
+- repeatable visual-iteration snapshots, asset receipts, recapture, rerouting and PASS/CONTINUE/BLOCKED decisions
 - repeatable Blender GLB export helper
 
 Do not rewrite those systems unless you actually reproduce a defect or a missing reusable capability.
@@ -183,42 +185,9 @@ The scenario supports per-action `offset_seconds` within shots.
 
 Do not manually re-author runtime behavior in JavaScript just to make one shot work. If timing needs adjustment, change the scenario data or a reusable preset.
 
-## 6. Deterministic visual iteration loop
+## 6. FLUX-assisted look-development and critique
 
-Repeatedly perform:
-
-```text
-Blender asset change
-  -> GLB export/register
-  -> export_web_bundle.py
-  -> browser runtime
-  -> npm run capture:preview
-  -> inspect build/preview/raptor_hunt_001/*.png
-  -> identify concrete visual defects
-  -> fix asset/material/camera/environment issue
-  -> repeat
-```
-
-Judge at least:
-
-- dinosaur anatomy/silhouette/body mass
-- scale relationships
-- topology and joint continuity
-- foot contact and skin deformation
-- locomotion and weight transfer
-- animation readability
-- actor separation/intersections
-- environment density/depth
-- fog/rain readability
-- lighting/material response
-- camera composition
-- documentary/cinematic credibility
-
-Do not declare a visual task complete without looking at actual browser output.
-
-## 7. FLUX-assisted look-development, critique and routing loop
-
-Use the local model exactly through the repository integration. For a representative shot:
+For a representative shot:
 
 ```bash
 python3 pipeline/run_lookdev_loop.py \
@@ -246,29 +215,15 @@ FLUX policy:
 - never use a FLUX image directly as a final video frame
 - never claim FLUX output itself fixed the 3D model
 
-Route critique findings correctly:
-
-```text
-camera / placement / fog / lighting / density
-        -> deterministic patch
-
-anatomy / topology / material / rig / animation
-        -> reusable Blender asset work
-```
-
 Write the visual critic result to:
 
 ```text
 build/critique/raptor_hunt_001/shot_005.result.json
 ```
 
-It must follow:
+It must follow `schemas/visual_critique_result.schema.json`.
 
-```text
-schemas/visual_critique_result.schema.json
-```
-
-Then route it:
+Route it:
 
 ```bash
 python3 pipeline/route_visual_critique.py \
@@ -285,17 +240,98 @@ build/work/raptor_hunt_001/shot_005/
 └── requests/*.md
 ```
 
-When executing `requests/*.md`:
+## 7. Execute every routed reusable fix inside a visual iteration
 
-- work highest priority first: blocking -> high -> medium -> low
-- edit the exact registered Blender source included in the request
-- merge multiple critique findings for the same asset into one reusable fix pass
-- do not invent a new asset ID when the request targets an existing registered master
+Do not directly edit the next routed asset without first opening an iteration. The previous critique/result is the baseline evidence for the change.
+
+### 7.1 Start before editing
+
+```bash
+python3 pipeline/run_visual_iteration.py \
+  scenarios/raptor_hunt_001/scenario.json \
+  start \
+  --shot-id shot_005
+```
+
+This snapshots the old preview/look target/critique/routing, Git HEAD and SHA-256 receipts for the registered Blender source/runtime exports targeted by current work.
+
+Only one active iteration may exist for a shot.
+
+### 7.2 Execute the highest-priority routed request
+
+Work in this order:
+
+```text
+blocking -> high -> medium -> low
+```
+
+For `requests/*.md`:
+
+- edit the exact registered Blender source in the request
+- merge multiple findings for the same asset into one reusable fix pass
+- do not invent a new asset ID for an existing registered master
 - satisfy every acceptance criterion
-- export the runtime asset and recapture the same shot
-- rebuild the critique package and critique result after the change
+- preserve scenario semantics, actor count and deterministic staging
+- export the registered GLB
+- do not overwrite the old critique result before the iteration has started
 
-Review in this order:
+### 7.3 Capture after the Blender/GLB change
+
+```bash
+python3 pipeline/run_visual_iteration.py \
+  scenarios/raptor_hunt_001/scenario.json \
+  capture \
+  --shot-id shot_005
+```
+
+This deterministically runs runtime bundle export, `npm run build`, `npm run capture:preview` and critique-package rebuild. It also records post-edit asset receipts and which targeted assets changed.
+
+Reuse the existing FLUX target unless the intended visual bar itself changed.
+
+### 7.4 Critique the new real preview
+
+Inspect the new authoritative Three.js preview. Write a **new**:
+
+```text
+build/critique/raptor_hunt_001/shot_005.result.json
+```
+
+Do not simply leave the old result in place. The state machine rejects a byte-identical result by default to prevent false completion.
+
+### 7.5 Finalize
+
+```bash
+python3 pipeline/run_visual_iteration.py \
+  scenarios/raptor_hunt_001/scenario.json \
+  finalize \
+  --shot-id shot_005
+```
+
+Finalize reroutes current work, compares old/new weighted issue severity and writes:
+
+```text
+build/iterations/raptor_hunt_001/shot_005/iteration_###/
+├── iteration.json
+├── decision.json
+├── NEXT_ACTION.md
+├── before/
+├── after/
+└── final/
+```
+
+Decision contract:
+
+- `PASS`: critic says pass, no high/blocking issue, no deterministic patch and no routed agent work remains
+- `BLOCKED`: at least one blocking visual issue/request remains; tooling may still be healthy
+- `CONTINUE`: more visual work remains but no blocking issue is present
+
+Read `NEXT_ACTION.md` after every finalize. If `CONTINUE` or `BLOCKED`, start a new iteration before executing the next request.
+
+A lower deterministic quality score is recorded as `improved`, higher as `regressed`, equal as `unchanged`. This score is a guardrail, not a replacement for your visual judgment.
+
+## 8. Review order
+
+Always review/fix higher-cost structural defects before cosmetic polish:
 
 ```text
 anatomy / silhouette / body mass
@@ -315,9 +351,9 @@ lighting / materials
 micro detail / color polish
 ```
 
-Generate a fresh FLUX target only when the intended visual bar changes materially. Otherwise keep the same target so before/after captures are judged against a stable quality reference.
+Do not spend repeated iterations on micro-scales, scars or color grading while anatomy, topology continuity or locomotion still fail.
 
-## 8. Fix engine code only when justified
+## 9. Fix engine code only when justified
 
 If you find an engine/runtime defect:
 
@@ -329,7 +365,7 @@ If you find an engine/runtime defect:
 
 Do not replace the runtime wholesale.
 
-## 9. Completion verification
+## 10. Completion verification
 
 Before completion run:
 
@@ -344,7 +380,7 @@ npm run capture:preview
 
 Actually inspect the captured PNGs.
 
-For representative hero/problem shots, also build critique packages, route the result, execute unresolved blocking/high reusable work, and record anything that remains.
+For representative hero/problem shots, routed visual work should now be executed through `run_visual_iteration.py`, not through an undocumented manual loop.
 
 The asset bootstrap is complete only when:
 
@@ -357,6 +393,7 @@ The asset bootstrap is complete only when:
 - representative shot captures have been visually reviewed
 - no blocking anatomy/topology/motion issue is hidden behind cosmetic detail
 - routed blocking/high work requests are resolved or explicitly documented with evidence
-- remaining visual defects are documented honestly
+- visual iterations end in `PASS` for the accepted hero/problem shots
+- remaining lower-priority defects are documented honestly
 
 Do not claim Blender/browser/FLUX verification succeeded unless you actually executed it.
