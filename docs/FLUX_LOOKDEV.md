@@ -5,8 +5,16 @@ This repository can use a local Ollama image-generation model as a visual look-d
 Default model:
 
 ```text
-x/flux2-klein:4b
+x/flux-klein:4b
 ```
+
+This matches the working local command:
+
+```bash
+ollama run x/flux-klein:4b "a cat holding a sign that says hello world"
+```
+
+Ollama's model page also exposes the FLUX.2 Klein family under `x/flux2-klein`; use `--model` if your local tag differs.
 
 ## Purpose
 
@@ -23,21 +31,17 @@ The generated image is a reference target only. Do not use it as a replacement v
 
 ## Prerequisites
 
-Confirm Ollama and the image model work locally first:
+Confirm the exact local command works first:
 
 ```bash
-ollama run x/flux2-klein:4b "photorealistic tyrannosaurus rex in a wet prehistoric rainforest"
+ollama run x/flux-klein:4b "photorealistic tyrannosaurus rex in a wet prehistoric rainforest"
 ```
 
-The integration uses Ollama's local HTTP endpoint by default:
-
-```text
-http://127.0.0.1:11434/api/generate
-```
+The integration intentionally invokes the `ollama` CLI rather than relying on an experimental HTTP image API. Ollama writes generated images into the command's current directory; the pipeline runs each generation inside an isolated temporary directory and copies the resulting image into `build/lookdev/...`.
 
 No Python packages beyond the standard library are required.
 
-## Generate scenario previews first
+## Generate deterministic scenario previews first
 
 ```bash
 python3 pipeline/export_web_bundle.py scenarios/raptor_hunt_001/scenario.json
@@ -46,7 +50,7 @@ npm run capture:preview
 cd ..
 ```
 
-This creates deterministic frames in:
+This creates frames in:
 
 ```text
 build/preview/raptor_hunt_001/
@@ -60,7 +64,7 @@ python3 pipeline/generate_lookdev.py \
   --shot-id shot_005
 ```
 
-When `build/preview/<scenario>/<shot>.png` exists, it is automatically sent as a reference image so the prompt asks FLUX to preserve the shot composition.
+If `build/preview/<scenario>/<shot>.png` exists, the command copies it to the isolated generation directory as `reference.png` and includes `./reference.png` in the Ollama prompt. This follows Ollama's normal CLI convention for attaching an image path. FLUX is asked to preserve composition while upgrading the frame into a photorealistic target.
 
 Outputs:
 
@@ -78,7 +82,7 @@ python3 pipeline/generate_lookdev.py scenarios/raptor_hunt_001/scenario.json
 
 ## Useful options
 
-Text-to-image only, without the Three.js reference frame:
+Generate without attaching the Three.js frame:
 
 ```bash
 python3 pipeline/generate_lookdev.py \
@@ -87,16 +91,16 @@ python3 pipeline/generate_lookdev.py \
   --no-preview
 ```
 
-Use a different local model or Ollama endpoint:
+Use another tag:
 
 ```bash
 python3 pipeline/generate_lookdev.py \
   scenarios/raptor_hunt_001/scenario.json \
-  --model x/flux2-klein:4b \
-  --ollama-url http://127.0.0.1:11434
+  --shot-id shot_005 \
+  --model x/flux2-klein:4b
 ```
 
-Inspect prompts without invoking the model:
+Inspect the generated prompt without invoking Ollama:
 
 ```bash
 python3 pipeline/generate_lookdev.py \
@@ -105,28 +109,17 @@ python3 pipeline/generate_lookdev.py \
   --dry-run
 ```
 
-Set reproducibility/output parameters when supported by the installed Ollama image runner:
+## Ollama image settings
 
-```bash
-python3 pipeline/generate_lookdev.py \
-  scenarios/raptor_hunt_001/scenario.json \
-  --shot-id shot_005 \
-  --width 1024 \
-  --height 576 \
-  --seed 42
-```
+Ollama image-generation settings such as image width, height, steps, seed and negative prompt are currently interactive `/set` settings. This integration deliberately starts with the proven one-shot `ollama run MODEL PROMPT` path rather than attempting to emulate unstable image-generation API fields.
 
-## Ollama version caveat
+If reproducible settings become important, extend the provider layer to launch an interactive session or use the stable image API available in the installed Ollama version. Do not leak provider-specific settings into scenario JSON.
 
-Ollama's image-generation support has changed across experimental releases. Some versions accept FLUX image generation through `/api/generate`; some newer releases have temporarily disabled it. Reference-image editing has also varied by version.
+## Reference-image caveat
 
-The integration therefore keeps Ollama isolated behind `pipeline/generate_lookdev.py`. If the local model works but a future Ollama API changes, only this provider layer should need adjustment; the scenario/runtime/Blender contracts should not change.
-
-If reference-image editing behaves poorly, rerun with `--no-preview`. The resulting target is still useful for anatomy, material and lighting look development, but it must not be treated as a composition match.
+FLUX.2 Klein advertises generation/editing capabilities, but CLI support can vary between Ollama builds. If attaching the preview fails or gives poor results, run with `--no-preview`. The result is still useful for anatomy, material, lighting and environment look development, but should not be treated as an exact composition match.
 
 ## Agent workflow
-
-Recommended loop:
 
 ```text
 scenario.json
@@ -139,4 +132,4 @@ scenario.json
    -> Blender/Cycles final rendering
 ```
 
-The visual critic should distinguish between deterministic fixes (camera, lighting, density, actor placement) and changes that require editing a reusable Blender asset (anatomy, topology, material, rig or animation).
+The visual critic should distinguish deterministic fixes (camera, lighting, density, actor placement) from changes that require editing a reusable Blender asset (anatomy, topology, material, rig or animation).
