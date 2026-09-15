@@ -5,16 +5,22 @@ This repository can use a local Ollama image-generation model as a visual look-d
 Default model:
 
 ```text
-x/flux-klein:4b
+x/flux-klein
 ```
 
-This matches the working local command:
+This matches Ollama's documented 4B shorthand and the working local command:
 
 ```bash
-ollama run x/flux-klein:4b "a cat holding a sign that says hello world"
+ollama run x/flux-klein "a cat holding a sign that says hello world"
 ```
 
-Ollama's model page also exposes the FLUX.2 Klein family under `x/flux2-klein`; use `--model` if your local tag differs.
+The canonical tagged equivalent is:
+
+```text
+x/flux2-klein:4b
+```
+
+Do **not** use `x/flux-klein:4b`; that shorthand-plus-tag combination is not a published model tag and causes Ollama to try a failing manifest pull.
 
 ## Purpose
 
@@ -34,7 +40,7 @@ The generated image is a reference target only. Do not use it as a replacement v
 Confirm the exact local command works first:
 
 ```bash
-ollama run x/flux-klein:4b "photorealistic tyrannosaurus rex in a wet prehistoric rainforest"
+ollama run x/flux-klein "photorealistic tyrannosaurus rex in a wet prehistoric rainforest"
 ```
 
 The integration intentionally invokes the `ollama` CLI rather than relying on an experimental HTTP image API. Ollama writes generated images into the command's current directory; the pipeline runs each generation inside an isolated temporary directory and copies the resulting image into `build/lookdev/...`.
@@ -91,7 +97,7 @@ python3 pipeline/generate_lookdev.py \
   --no-preview
 ```
 
-Use another tag:
+Use the canonical tagged model explicitly:
 
 ```bash
 python3 pipeline/generate_lookdev.py \
