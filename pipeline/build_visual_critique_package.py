@@ -76,6 +76,8 @@ def review_contract() -> dict[str, Any]:
             "Never propose reproducing FLUX hallucinated actors, props, blocking or framing.",
             "Never propose using the FLUX frame as a final video frame.",
         ],
+        "result_schema": "schemas/visual_critique_result.schema.json",
+        "routing_command": "pipeline/route_visual_critique.py",
     }
 
 
@@ -103,6 +105,7 @@ def expected_output_schema(shot_id: str) -> dict[str, Any]:
             {
                 "agent": "asset_designer|animation_director|environment_designer",
                 "asset_id": "...",
+                "severity": "low|medium|high|blocking",
                 "reason": "...",
                 "acceptance_criteria": ["..."],
             }
@@ -119,7 +122,8 @@ def build_request_text(package: dict[str, Any]) -> str:
             "Review the deterministic Three.js preview as the authoritative shot result.",
             "Use the FLUX image only as an advisory visual-quality reference for anatomy, materials, lighting, atmosphere and environment richness.",
             "The FLUX image was generated from text, not by editing the preview; ignore any different actor count, blocking, camera or composition in it.",
-            "Return JSON matching `expected_output` in the package.",
+            "Return JSON matching `expected_output` in the package and `schemas/visual_critique_result.schema.json`.",
+            f"Save the completed result as build/critique/{package['scenario_id']}/{package['shot_id']}.result.json.",
             "",
             f"- authoritative preview: {inputs['preview_frame']}",
             f"- advisory FLUX look target: {inputs['lookdev_target']}",
@@ -127,6 +131,8 @@ def build_request_text(package: dict[str, Any]) -> str:
             f"- look-dev metadata: {inputs['lookdev_metadata']}",
             "",
             "Focus first on blocking anatomy/topology/motion defects in the real preview, then camera/lighting/environment polish.",
+            "For reusable agent work, include a severity and visually verifiable acceptance criteria.",
+            "After saving the result, route it through pipeline/route_visual_critique.py.",
         ]
     ) + "\n"
 
