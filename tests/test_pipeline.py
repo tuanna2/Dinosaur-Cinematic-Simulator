@@ -9,6 +9,7 @@ from pathlib import Path
 from pipeline.build_agent_requests import build_requests
 from pipeline.compile_execution_plan import compile_plan
 from pipeline.export_web_bundle import export_bundle
+from pipeline.generate_lookdev import build_prompt, find_shot
 from pipeline.preflight import resolve_required
 from pipeline.register_asset import register
 from pipeline.validate_scenario import load_json, validate
@@ -114,6 +115,21 @@ class PipelineTests(unittest.TestCase):
             self.assertEqual(len(plan["instances"]), 10)
             self.assertEqual(manifest["schema_version"], 1)
             self.assertIsInstance(manifest["assets"], list)
+
+    def test_lookdev_prompt_uses_shot_semantics(self) -> None:
+        shot = find_shot(self.scenario, "shot_005")
+        prompt = build_prompt(self.scenario, shot, False)
+        self.assertIn("tyrannosaurus rex enter", prompt)
+        self.assertIn("tyrannosaurus rex roar", prompt)
+        self.assertIn("8 velociraptor react", prompt)
+        self.assertIn("32mm lens", prompt)
+        self.assertNotIn("./reference.png", prompt)
+
+    def test_lookdev_reference_prompt_preserves_composition(self) -> None:
+        shot = find_shot(self.scenario, "shot_005")
+        prompt = build_prompt(self.scenario, shot, True)
+        self.assertIn("Preserve the camera angle", prompt)
+        self.assertIn("Reference image: ./reference.png", prompt)
 
 
 if __name__ == "__main__":
