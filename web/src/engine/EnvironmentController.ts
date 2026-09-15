@@ -4,6 +4,7 @@ import type { RuntimeEnvironment } from "../types";
 export class EnvironmentController {
   private readonly rain: THREE.Points;
   private readonly rainPositions: Float32Array;
+  private readonly initialRainPositions: Float32Array;
   private readonly sun = new THREE.DirectionalLight(0xffffff, 3.0);
   private readonly hemi = new THREE.HemisphereLight(0xffffff, 0x273124, 2.0);
   private rainSpeed = 16;
@@ -25,6 +26,7 @@ export class EnvironmentController {
     const rain = this.createRain(2200);
     this.rain = rain.points;
     this.rainPositions = rain.positions;
+    this.initialRainPositions = rain.positions.slice();
     this.scene.add(this.rain);
 
     this.applyTimeOfDay(environment.time_of_day);
@@ -37,6 +39,12 @@ export class EnvironmentController {
       this.rainPositions[i] -= this.rainSpeed * dt;
       if (this.rainPositions[i] < 0.2) this.rainPositions[i] += 28;
     }
+    const position = this.rain.geometry.getAttribute("position") as THREE.BufferAttribute;
+    position.needsUpdate = true;
+  }
+
+  reset(): void {
+    this.rainPositions.set(this.initialRainPositions);
     const position = this.rain.geometry.getAttribute("position") as THREE.BufferAttribute;
     position.needsUpdate = true;
   }
