@@ -6,7 +6,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from pipeline.generate_lookdev import find_shot, load_json
+try:
+    from pipeline.generate_lookdev import find_shot, load_json
+except ModuleNotFoundError:  # Direct `python pipeline/...py` execution.
+    from generate_lookdev import find_shot, load_json
 
 
 ROOT = Path(__file__).resolve().parents[1]
