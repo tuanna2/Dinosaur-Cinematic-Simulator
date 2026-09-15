@@ -11,9 +11,7 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-# Ollama documents the 4B shorthand as `x/flux-klein`; the canonical tagged
-# equivalent is `x/flux2-klein:4b`. Do not append `:4b` to the shorthand.
-DEFAULT_MODEL = "x/flux-klein"
+DEFAULT_MODEL = "x/flux2-klein:4b"
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".webp"}
 
 
@@ -121,8 +119,8 @@ def run_ollama_cli(*, model: str, prompt: str, reference_path: Path | None, time
             hint = ""
             if model == "x/flux-klein:4b":
                 hint = (
-                    "\nHint: `x/flux-klein:4b` is not a published tag. "
-                    "Use the documented 4B shorthand `x/flux-klein` or canonical `x/flux2-klein:4b`."
+                    "\nHint: `x/flux-klein:4b` is not a valid tag in this setup. "
+                    "Use `x/flux2-klein:4b`, which is the tested canonical 4B tag."
                 )
             raise RuntimeError(f"ollama run failed ({result.returncode}):\n{output}{hint}")
 
