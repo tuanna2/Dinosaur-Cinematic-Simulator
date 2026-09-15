@@ -8,15 +8,16 @@ The project is designed primarily as a cinematic/video factory rather than a par
 
 **Deterministic when possible; AI only when necessary.**
 
-Normal production should not ask an LLM to spawn actors, apply known weather, play known animations, choose registered assets, apply known camera presets, or run playback. AI is reserved for story/shot design, genuinely missing reusable assets or animations, and visual criticism/repair.
+Normal production should not ask an LLM to spawn actors, apply known weather, play known animations, choose registered assets, apply known camera presets, or run playback. AI is reserved for story/shot design, genuinely missing reusable assets or animations, visual look-development, and visual criticism/repair.
 
 See `AGENTS.md` for repository-wide agent rules.
 
 ## Primary stack
 
 - Three.js + TypeScript + Vite: primary realtime runtime and fast preview engine.
-- Blender 5.2.1: reusable dinosaur/environment master assets exported as GLB/GLTF.
-- Python standard library: deterministic scenario compiler, preflight, asset resolution and bundle export.
+- Blender 5.2.1: reusable dinosaur/environment master assets exported as GLB/GLTF and future final cinematic rendering.
+- Ollama + FLUX Klein: optional local photorealistic look-development targets from deterministic shot previews.
+- Python standard library: deterministic scenario compiler, preflight, asset resolution, bundle export, and FLUX look-dev orchestration.
 - System Chrome/Chromium + `playwright-core`: deterministic shot-preview capture.
 - `agents/*.md`: specialized AI role contracts.
 - `knowledge/*.md`: reusable dinosaur/cinematic knowledge.
@@ -120,6 +121,32 @@ build/preview/<scenario_id>/
 
 If Chrome is installed in a non-standard location, set `CHROME_BIN` to the executable path.
 
+## 5. Generate FLUX cinematic look-dev targets
+
+If your local Ollama setup already supports:
+
+```bash
+ollama run x/flux-klein:4b "a cat holding a sign that says hello world"
+```
+
+then generate a target for one scenario shot with:
+
+```bash
+python3 pipeline/generate_lookdev.py \
+  scenarios/raptor_hunt_001/scenario.json \
+  --shot-id shot_005
+```
+
+The CLI uses the captured Three.js frame as a reference when available and writes the generated target, prompt and metadata under:
+
+```text
+build/lookdev/<scenario_id>/
+```
+
+Generate all shots by omitting `--shot-id`.
+
+See `docs/FLUX_LOOKDEV.md` for provider details, reference-image caveats and workflow guidance.
+
 ## Blender asset workflow
 
 See `docs/BLENDER_ASSET_CONTRACT.md` for scale, orientation, skeleton, animation naming and GLB conventions.
@@ -173,6 +200,7 @@ See:
 - `docs/PRODUCTION_WORKFLOW.md`
 - `docs/ARCHITECTURE.md`
 - `docs/BLENDER_ASSET_CONTRACT.md`
+- `docs/FLUX_LOOKDEV.md`
 
 ## Astra bootstrap
 
@@ -180,7 +208,7 @@ After cloning this repository on the workstation with Blender 5.2.1, give Astra 
 
 `ASTRA_BOOTSTRAP_PROMPT.md`
 
-Astra should now focus primarily on visual factory-building: create and refine reusable dinosaur/environment masters, rigs, textures and missing animations, export/register GLBs, run the existing browser runtime, inspect captured shot previews and iterate visual quality. The deterministic engine/runtime should be extended only when an actual reusable capability is missing.
+Astra should focus on visual factory-building: create and refine reusable dinosaur/environment masters, rigs, textures and missing animations, export/register GLBs, run the existing browser runtime, generate optional FLUX look-dev targets, inspect captured shot previews and iterate visual quality. The deterministic engine/runtime should be extended only when an actual reusable capability is missing.
 
 ## IP policy
 
