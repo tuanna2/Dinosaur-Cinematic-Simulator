@@ -66,6 +66,7 @@ def main() -> int:
     parser.add_argument("--catalog", type=Path, default=Path("config/asset_catalog.json"))
     parser.add_argument("--blender-source")
     parser.add_argument("--export-path")
+    parser.add_argument("--web-path")
     parser.add_argument("--unreal-path")
     parser.add_argument("--skeleton-id")
     parser.add_argument("--species")
@@ -79,6 +80,7 @@ def main() -> int:
         "status": args.status,
         "blender_source": args.blender_source,
         "export_path": args.export_path,
+        "web_path": args.web_path,
         "unreal_path": args.unreal_path,
         "skeleton_id": args.skeleton_id,
         "species": args.species,
