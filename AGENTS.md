@@ -18,6 +18,8 @@ Before changing architecture or content, read:
 6. `knowledge/cinematic-language.md`
 7. `docs/FLUX_LOOKDEV.md`
 8. `docs/VISUAL_CRITIQUE_WORKFLOW.md`
+9. `docs/CRITIQUE_ROUTING.md`
+10. `docs/VISUAL_ITERATION_LOOP.md`
 
 Role-specific agents must also read their matching file in `agents/`.
 
@@ -37,6 +39,8 @@ Do not call an LLM for these operations:
 - browser playback of an approved execution plan
 - deterministic preview capture
 - packaging preview/look-dev inputs for visual critique
+- critique routing into deterministic patches/reusable work
+- visual-iteration snapshots, receipts, trend scoring and PASS/CONTINUE/BLOCKED decisions
 - frame/video post-processing
 - file/path validation
 
@@ -57,13 +61,14 @@ AI may be used for:
 
 ## FLUX look-development policy
 
-The default local image model is `x/flux-klein` through Ollama CLI. The canonical tagged equivalent is `x/flux2-klein:4b`.
+The tested/default local image model is `x/flux2-klein:4b` through Ollama CLI.
 
 FLUX is advisory only:
 
 - scenario semantics and deterministic Three.js staging remain authoritative
+- current Ollama generation is text-to-image, not preview image editing
 - never use a FLUX frame directly as a final video frame
-- never reproduce hallucinated extra animals/props merely because they appear in a target
+- never reproduce hallucinated extra/missing animals, props, framing or blocking merely because they appear in a target
 - use the target to expose realism gaps in anatomy, materials, environment, atmosphere, lighting and visual hierarchy
 - route reusable mesh/material/rig/animation defects back to Blender master assets
 
@@ -76,6 +81,59 @@ python3 pipeline/run_lookdev_loop.py \
 ```
 
 Then read the generated package under `build/critique/<scenario_id>/` together with `agents/visual-critic.md`.
+
+## Routed visual-work policy
+
+Visual critic output is written to:
+
+```text
+build/critique/<scenario_id>/<shot_id>.result.json
+```
+
+Route it with:
+
+```bash
+python3 pipeline/route_visual_critique.py \
+  scenarios/<scenario_id>/scenario.json \
+  build/critique/<scenario_id>/<shot_id>.result.json
+```
+
+Execute the highest-priority reusable request under `build/work/<scenario_id>/<shot_id>/requests/`. Deterministic camera/lighting/placement patches stay separate from creative Blender work.
+
+## Visual iteration policy
+
+Before changing the next routed reusable asset, start an evidence-preserving iteration:
+
+```bash
+python3 pipeline/run_visual_iteration.py \
+  scenarios/<scenario_id>/scenario.json \
+  start --shot-id <shot_id>
+```
+
+After editing/exporting the registered asset:
+
+```bash
+python3 pipeline/run_visual_iteration.py \
+  scenarios/<scenario_id>/scenario.json \
+  capture --shot-id <shot_id>
+```
+
+After visually reviewing the new preview and writing a new critique result:
+
+```bash
+python3 pipeline/run_visual_iteration.py \
+  scenarios/<scenario_id>/scenario.json \
+  finalize --shot-id <shot_id>
+```
+
+Rules:
+
+- do not overwrite the old critique result before `start`
+- do not finalize with the old result; the state machine rejects byte-identical results by default
+- read `NEXT_ACTION.md` after finalize
+- `BLOCKED` means an urgent visual defect remains, not that tooling failed
+- `PASS` is valid only when no high/blocking issue, deterministic patch or routed agent work remains
+- reuse the same FLUX quality target across iterations unless the intended visual direction changes
 
 ## Asset policy
 
