@@ -57,7 +57,7 @@ AI may be used for:
 
 ## FLUX look-development policy
 
-The default local image model is `x/flux-klein:4b` through Ollama CLI.
+The default local image model is `x/flux-klein` through Ollama CLI. The canonical tagged equivalent is `x/flux2-klein:4b`.
 
 FLUX is advisory only:
 
