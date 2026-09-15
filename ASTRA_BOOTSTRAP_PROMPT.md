@@ -17,6 +17,7 @@ Treat these repository files as contracts:
 - `docs/BLENDER_ASSET_CONTRACT.md`
 - `docs/FLUX_LOOKDEV.md`
 - `docs/VISUAL_CRITIQUE_WORKFLOW.md`
+- `docs/CRITIQUE_ROUTING.md`
 - `agents/asset-designer.md`
 - `agents/animation-director.md`
 - `agents/environment-designer.md`
@@ -32,7 +33,7 @@ Local baseline:
 - Blender: 5.2.1
 - Runtime: Three.js + TypeScript + Vite
 - Browser: Chrome/Chromium
-- Local look-dev: Ollama + `x/flux-klein` (canonical tagged equivalent: `x/flux2-klein:4b`)
+- Local look-dev: Ollama + `x/flux2-klein:4b`
 - Unreal Engine is not required.
 
 ## Architecture rule
@@ -57,6 +58,7 @@ The repository already implements:
 - deterministic browser shot-preview capture
 - local FLUX look-development target generation
 - visual-critique package generation
+- deterministic critique routing into patches and reusable agent work requests
 - repeatable Blender GLB export helper
 
 Do not rewrite those systems unless you actually reproduce a defect or a missing reusable capability.
@@ -78,7 +80,7 @@ npm run dev
 Confirm local FLUX separately:
 
 ```bash
-ollama run x/flux-klein "a photorealistic tyrannosaurus rex in a wet prehistoric rainforest"
+ollama run x/flux2-klein:4b "a photorealistic tyrannosaurus rex in a wet prehistoric rainforest"
 ```
 
 Inspect the current runtime in the browser before creating or changing assets.
@@ -214,7 +216,7 @@ Judge at least:
 
 Do not declare a visual task complete without looking at actual browser output.
 
-## 7. FLUX-assisted look-development and critique loop
+## 7. FLUX-assisted look-development, critique and routing loop
 
 Use the local model exactly through the repository integration. For a representative shot:
 
@@ -239,7 +241,8 @@ FLUX policy:
 
 - scenario semantics and deterministic staging are authoritative
 - FLUX may guide realism, anatomy, material, lighting, atmosphere and visual hierarchy
-- ignore hallucinated extra animals, props or contradictory staging
+- the current Ollama FLUX step is text-generated, not preview image editing
+- ignore hallucinated extra/missing animals, props, framing or contradictory staging
 - never use a FLUX image directly as a final video frame
 - never claim FLUX output itself fixed the 3D model
 
@@ -252,6 +255,45 @@ camera / placement / fog / lighting / density
 anatomy / topology / material / rig / animation
         -> reusable Blender asset work
 ```
+
+Write the visual critic result to:
+
+```text
+build/critique/raptor_hunt_001/shot_005.result.json
+```
+
+It must follow:
+
+```text
+schemas/visual_critique_result.schema.json
+```
+
+Then route it:
+
+```bash
+python3 pipeline/route_visual_critique.py \
+  scenarios/raptor_hunt_001/scenario.json \
+  build/critique/raptor_hunt_001/shot_005.result.json
+```
+
+Read the generated work under:
+
+```text
+build/work/raptor_hunt_001/shot_005/
+├── deterministic_patches.json
+├── work_requests.json
+└── requests/*.md
+```
+
+When executing `requests/*.md`:
+
+- work highest priority first: blocking -> high -> medium -> low
+- edit the exact registered Blender source included in the request
+- merge multiple critique findings for the same asset into one reusable fix pass
+- do not invent a new asset ID when the request targets an existing registered master
+- satisfy every acceptance criterion
+- export the runtime asset and recapture the same shot
+- rebuild the critique package and critique result after the change
 
 Review in this order:
 
@@ -273,7 +315,7 @@ lighting / materials
 micro detail / color polish
 ```
 
-After changing a Blender master, export it, capture the same shot again and rebuild the critique package. Generate a fresh FLUX target only when the intended look itself changes materially.
+Generate a fresh FLUX target only when the intended visual bar changes materially. Otherwise keep the same target so before/after captures are judged against a stable quality reference.
 
 ## 8. Fix engine code only when justified
 
@@ -302,7 +344,7 @@ npm run capture:preview
 
 Actually inspect the captured PNGs.
 
-For representative hero/problem shots, also build critique packages and record unresolved high/blocking issues.
+For representative hero/problem shots, also build critique packages, route the result, execute unresolved blocking/high reusable work, and record anything that remains.
 
 The asset bootstrap is complete only when:
 
@@ -314,6 +356,7 @@ The asset bootstrap is complete only when:
 - preview capture works
 - representative shot captures have been visually reviewed
 - no blocking anatomy/topology/motion issue is hidden behind cosmetic detail
+- routed blocking/high work requests are resolved or explicitly documented with evidence
 - remaining visual defects are documented honestly
 
 Do not claim Blender/browser/FLUX verification succeeded unless you actually executed it.
