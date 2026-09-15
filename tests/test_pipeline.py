@@ -7,11 +7,13 @@ import unittest
 from pathlib import Path
 
 from pipeline.build_agent_requests import build_requests
+from pipeline.build_visual_critique_package import build_package
 from pipeline.compile_execution_plan import compile_plan
 from pipeline.export_web_bundle import export_bundle
 from pipeline.generate_lookdev import build_prompt, find_shot
 from pipeline.preflight import resolve_required
 from pipeline.register_asset import register
+from pipeline.run_lookdev_loop import build_commands
 from pipeline.validate_scenario import load_json, validate
 
 
@@ -130,6 +132,63 @@ class PipelineTests(unittest.TestCase):
         prompt = build_prompt(self.scenario, shot, True)
         self.assertIn("Preserve the camera angle", prompt)
         self.assertIn("Reference image: ./reference.png", prompt)
+
+    def test_visual_critique_package_links_preview_target_and_relevant_actors(self) -> None:
+        shot = find_shot(self.scenario, "shot_005")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            preview_dir = root / "preview"
+            lookdev_dir = root / "lookdev"
+            output_dir = root / "critique"
+            preview_dir.mkdir()
+            lookdev_dir.mkdir()
+            (preview_dir / "shot_005.png").write_bytes(b"preview")
+            (lookdev_dir / "shot_005.png").write_bytes(b"target")
+            (lookdev_dir / "shot_005.prompt.txt").write_text("prompt\n", encoding="utf-8")
+            (lookdev_dir / "shot_005.json").write_text(
+                json.dumps({"provider": "ollama_cli", "model": "x/flux-klein:4b"}),
+                encoding="utf-8",
+            )
+
+            package_path, request_path = build_package(
+                self.scenario,
+                shot,
+                preview_dir=preview_dir,
+                lookdev_dir=lookdev_dir,
+                output_dir=output_dir,
+            )
+            package = json.loads(package_path.read_text(encoding="utf-8"))
+            actor_ids = {actor["id"] for actor in package["actors"]}
+
+            self.assertEqual(package["schema_version"], 1)
+            self.assertEqual(package["shot_id"], "shot_005")
+            self.assertEqual(actor_ids, {"raptor_pack", "trex_01"})
+            self.assertTrue(package["inputs"]["preview_frame"].endswith("shot_005.png"))
+            self.assertTrue(package["inputs"]["lookdev_target"].endswith("shot_005.png"))
+            self.assertEqual(package["lookdev_metadata"]["model"], "x/flux-klein:4b")
+            self.assertIn("requires_agent", package["expected_output"])
+            self.assertTrue(request_path.exists())
+
+    def test_lookdev_loop_builds_generation_and_packaging_commands(self) -> None:
+        commands = build_commands(
+            SCENARIO.resolve(),
+            shot_ids=["shot_005"],
+            model="x/flux-klein:4b",
+            timeout=120,
+            no_preview=False,
+            skip_export=True,
+            skip_capture=True,
+            skip_lookdev=False,
+            skip_package=False,
+            allow_missing_lookdev=False,
+        )
+        self.assertEqual(len(commands), 2)
+        lookdev_command = commands[0][0]
+        package_command = commands[1][0]
+        self.assertTrue(any(part.endswith("generate_lookdev.py") for part in lookdev_command))
+        self.assertIn("x/flux-klein:4b", lookdev_command)
+        self.assertIn("shot_005", lookdev_command)
+        self.assertTrue(any(part.endswith("build_visual_critique_package.py") for part in package_command))
 
 
 if __name__ == "__main__":
