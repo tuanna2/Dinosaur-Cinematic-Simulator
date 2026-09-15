@@ -71,6 +71,7 @@ export class CinematicRuntime {
       environmentAsset.root.userData.runtimeEnvironment = true;
       this.enableShadows(environmentAsset.root);
       this.scene.add(environmentAsset.root);
+      this.environment.setPlaceholderWorldVisible(false);
     }
 
     for (const [index, instance] of this.plan.instances.entries()) {
@@ -100,6 +101,7 @@ export class CinematicRuntime {
       35,
       true,
     );
+    this.processEvents();
     this.resize();
     this.render();
     this.loop();
@@ -213,7 +215,8 @@ export class CinematicRuntime {
       if (event.time > this.elapsed) break;
       if (event.type === "camera") {
         const target = this.resolveActor(event.camera.target);
-        this.cameraDirector.apply(event.camera.preset, target, event.camera.lens_mm ?? 50);
+        const frameZero = event.time === 0 && this.elapsed === 0;
+        this.cameraDirector.apply(event.camera.preset, target, event.camera.lens_mm ?? 50, frameZero);
       } else {
         this.applyAction(event);
       }
@@ -235,13 +238,7 @@ export class CinematicRuntime {
   private updateActors(dt: number): void {
     for (const [id, intent] of this.motion) {
       const actor = this.actors.get(id);
-      if (!actor) continue;
-
-      const controller = this.controllers.get(id);
-      if (intent.speed <= 0) {
-        controller?.update(0);
-        continue;
-      }
+      if (!actor || intent.speed <= 0) continue;
 
       const target = intent.targetIds.length ? this.actors.get(intent.targetIds[0]) ?? null : null;
       const targetPosition = target?.position ?? null;
@@ -313,6 +310,7 @@ export class CinematicRuntime {
       35,
       true,
     );
+    this.processEvents();
     if (notify) this.onTime?.(0);
   }
 
