@@ -29,6 +29,7 @@ export interface ActionEvent {
   time: number;
   shot_id: string;
   order: number;
+  offset_seconds?: number;
   actor: string;
   resolved_instances: string[];
   action: string;
