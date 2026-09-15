@@ -126,7 +126,7 @@ If Chrome is installed in a non-standard location, set `CHROME_BIN` to the execu
 If your local Ollama setup already supports:
 
 ```bash
-ollama run x/flux-klein:4b "a cat holding a sign that says hello world"
+ollama run x/flux-klein "a cat holding a sign that says hello world"
 ```
 
 then generate a target for one scenario shot with:
@@ -136,6 +136,8 @@ python3 pipeline/generate_lookdev.py \
   scenarios/raptor_hunt_001/scenario.json \
   --shot-id shot_005
 ```
+
+The default uses Ollama's documented 4B shorthand `x/flux-klein`; the canonical tagged equivalent is `x/flux2-klein:4b`. Do not use `x/flux-klein:4b`.
 
 The CLI uses the captured Three.js frame as a reference when available and writes the generated target, prompt and metadata under:
 
