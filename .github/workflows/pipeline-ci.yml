@@ -36,21 +36,42 @@ jobs:
             --output /tmp/raptor_hunt_execution_plan.json
           python -m json.tool /tmp/raptor_hunt_execution_plan.json > /dev/null
 
-      - name: Verify expected bootstrap asset gaps
+      - name: Verify preflight and agent request routing
         shell: bash
         run: |
           set +e
           python pipeline/preflight.py scenarios/raptor_hunt_001/scenario.json --out-dir /tmp/preflight
           status=$?
           set -e
-          if [ "$status" -ne 1 ]; then
-            echo "Expected bootstrap preflight to return 1 for missing assets, got $status"
-            exit 1
+          if [ "$status" -ne 0 ] && [ "$status" -ne 1 ]; then
+            echo "Preflight returned unexpected status $status"
+            exit "$status"
           fi
-          python pipeline/build_agent_requests.py \
-            /tmp/preflight/raptor_hunt_001/preflight.json \
-            --output /tmp/preflight/raptor_hunt_001/agent_requests.json
-          python -m json.tool /tmp/preflight/raptor_hunt_001/agent_requests.json > /dev/null
+
+          report=/tmp/preflight/raptor_hunt_001/preflight.json
+          requests=/tmp/preflight/raptor_hunt_001/agent_requests.json
+          python -m json.tool "$report" > /dev/null
+          python pipeline/build_agent_requests.py "$report" --output "$requests"
+          python -m json.tool "$requests" > /dev/null
+
+          python - "$status" "$report" "$requests" <<'PY'
+          import json
+          import sys
+          from pathlib import Path
+
+          status = int(sys.argv[1])
+          report = json.loads(Path(sys.argv[2]).read_text())
+          requests = json.loads(Path(sys.argv[3]).read_text())
+          missing = report.get("missing_assets", [])
+
+          if status == 0:
+              assert report.get("status") == "ready", report
+              assert not missing, missing
+              assert requests.get("request_count") == 0, requests
+          else:
+              assert missing, report
+              assert requests.get("request_count") == len(set(missing)), requests
+          PY
 
       - name: Export Three.js runtime bundle
         run: |
