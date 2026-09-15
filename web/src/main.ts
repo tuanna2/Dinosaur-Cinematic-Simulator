@@ -13,7 +13,11 @@ const canvas = requireElement<HTMLCanvasElement>("#viewport");
 const status = requireElement<HTMLSpanElement>("#status");
 const timeLabel = requireElement<HTMLSpanElement>("#time");
 const playButton = requireElement<HTMLButtonElement>("#play");
+const pauseButton = requireElement<HTMLButtonElement>("#pause");
+const frameButton = requireElement<HTMLButtonElement>("#frame");
 const restartButton = requireElement<HTMLButtonElement>("#restart");
+const seek = requireElement<HTMLInputElement>("#seek");
+const controls = [playButton, pauseButton, frameButton, restartButton, seek];
 
 function formatTime(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
@@ -34,21 +38,26 @@ async function bootstrap(): Promise<void> {
       loadJson<AssetManifest>("/runtime/asset_manifest.json"),
     ]);
 
+    seek.max = String(plan.duration_seconds);
     const assets = new AssetRegistry(manifest);
     const runtime = new CinematicRuntime(canvas, plan, assets, (seconds) => {
       timeLabel.textContent = formatTime(seconds);
+      seek.value = String(seconds);
     });
 
     await runtime.initialize();
-    status.textContent = `${plan.scenario_id} · ${plan.instances.length} actors · ${plan.duration_seconds}s`;
+    Object.assign(window, { dinosaurRuntime: runtime });
+    status.textContent = `${plan.scenario_id} · ${plan.instances.length} actors · ${plan.duration_seconds}s · ${plan.render.fps}fps`;
     playButton.addEventListener("click", () => runtime.play());
+    pauseButton.addEventListener("click", () => runtime.pause());
+    frameButton.addEventListener("click", () => runtime.stepFrame());
     restartButton.addEventListener("click", () => runtime.restart());
+    seek.addEventListener("input", () => runtime.seek(Number(seek.value)));
     runtime.play();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     status.textContent = `Runtime bundle missing: ${message}. Run pipeline/export_web_bundle.py first.`;
-    playButton.disabled = true;
-    restartButton.disabled = true;
+    for (const control of controls) control.setAttribute("disabled", "true");
   }
 }
 

@@ -68,7 +68,8 @@
                 "actor": {"type": "string"},
                 "action": {"type": "string"},
                 "target": {"type": "string"},
-                "animation": {"type": "string"}
+                "animation": {"type": "string"},
+                "offset_seconds": {"type": "number", "minimum": 0}
               }
             }
           }

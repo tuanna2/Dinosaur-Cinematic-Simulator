@@ -73,12 +73,14 @@ def compile_plan(scenario: dict[str, Any]) -> dict[str, Any]:
             animation = action.get("animation")
             if animation:
                 required_assets.add(animation)
+            offset_seconds = float(action.get("offset_seconds", 0))
             events.append(
                 {
                     "type": "action",
-                    "time": start,
+                    "time": start + offset_seconds,
                     "shot_id": shot["id"],
                     "order": order,
+                    "offset_seconds": offset_seconds,
                     "actor": action["actor"],
                     "resolved_instances": (
                         actor_groups.get(action["actor"], [])

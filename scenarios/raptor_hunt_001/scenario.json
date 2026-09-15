@@ -60,9 +60,9 @@
       "duration": 12,
       "camera": {"preset": "low_threat_reveal", "target": "trex_01", "lens_mm": 40},
       "actions": [
-        {"actor": "trex_01", "action": "enter", "animation": "anim_trex_walk"},
-        {"actor": "trex_01", "action": "roar", "animation": "anim_trex_roar"},
-        {"actor": "raptor_pack", "action": "react", "target": "trex_01", "animation": "anim_raptor_react"}
+        {"actor": "trex_01", "action": "enter", "animation": "anim_trex_walk", "offset_seconds": 0},
+        {"actor": "trex_01", "action": "roar", "animation": "anim_trex_roar", "offset_seconds": 6},
+        {"actor": "raptor_pack", "action": "react", "target": "trex_01", "animation": "anim_raptor_react", "offset_seconds": 6}
       ]
     },
     {
