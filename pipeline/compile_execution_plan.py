@@ -2,8 +2,8 @@
 """Compile a validated scenario into a deterministic execution plan.
 
 The execution plan expands actor groups into stable instance IDs and converts
-shots into explicit camera/action events. Unreal consumes this plan; an LLM is
-not required at runtime.
+shots into explicit camera/action events. Runtime backends consume this plan;
+an LLM is not required at playback time.
 """
 
 from __future__ import annotations
