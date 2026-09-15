@@ -17,6 +17,7 @@ See `AGENTS.md` for repository-wide agent rules.
 - Three.js + TypeScript + Vite: primary realtime runtime and fast preview engine.
 - Blender 5.2.1: reusable dinosaur/environment master assets exported as GLB/GLTF.
 - Python standard library: deterministic scenario compiler, preflight, asset resolution and bundle export.
+- System Chrome/Chromium + `playwright-core`: deterministic shot-preview capture.
 - `agents/*.md`: specialized AI role contracts.
 - `knowledge/*.md`: reusable dinosaur/cinematic knowledge.
 - `schemas/*.json`: machine contracts.
@@ -65,29 +66,80 @@ npm run dev
 
 Open the Vite URL in a browser.
 
-The current bootstrap runtime can already:
+The runtime now supports:
 
-- load the compiled execution plan
-- spawn stable actor instances
-- expand the eight-member raptor pack
-- apply deterministic camera presets
-- execute simple chase/flee/stalk/attack steering
-- run the 3-minute timeline
-- use clear placeholder dinosaurs when approved GLB assets are not available
-- replace placeholders automatically when logical asset IDs receive valid `web_path` entries
+- deterministic execution-plan playback
+- stable actor/group instance IDs
+- GLB master loading with skinned cloning
+- `THREE.AnimationMixer` playback from embedded or separate animation GLBs
+- cross-fading and one-shot/loop animation policy
+- dinosaur behavior states such as idle/stalk/chase/flee/attack/defend/react/roar
+- deterministic raptor-pack surround spacing and local separation
+- smooth tracking/aerial/telephoto/threat-reveal camera transitions
+- rain, fog, lighting and time-of-day presets
+- placeholder world/dinosaurs when real GLBs are missing
+- automatic removal of the placeholder world when an approved environment GLB exists
+- Play/Pause/Restart/frame-step/timeline seek controls
+- fixed-step deterministic seek at scenario FPS
+- machine-readable runtime snapshots
+- canvas PNG capture API
 
-Placeholders are development-only; preflight still reports missing real assets.
+The browser exposes the running instance as:
 
-## Asset registration
+```js
+window.dinosaurRuntime
+```
+
+Useful methods include:
+
+```js
+window.dinosaurRuntime.pause()
+window.dinosaurRuntime.seek(42.5)
+window.dinosaurRuntime.stepFrame()
+window.dinosaurRuntime.renderFrameAt(90)
+window.dinosaurRuntime.snapshot()
+window.dinosaurRuntime.captureDataUrl()
+```
+
+This browser API is intended for headless capture and visual-critic automation.
+
+## 4. Capture one preview frame per shot
+
+With Google Chrome/Chromium installed:
+
+```bash
+cd web
+npm run capture:preview
+```
+
+The capture script starts Vite, opens the simulator headlessly, seeks deterministically to the midpoint of every camera shot, and writes PNGs under:
+
+```text
+build/preview/<scenario_id>/
+```
+
+If Chrome is installed in a non-standard location, set `CHROME_BIN` to the executable path.
+
+## Blender asset workflow
+
+See `docs/BLENDER_ASSET_CONTRACT.md` for scale, orientation, skeleton, animation naming and GLB conventions.
+
+A repeatable Blender 5.2.1 export helper is included:
+
+```bash
+blender --background blender/dinosaurs/trex/trex_master.blend \
+  --python blender/export_glb.py -- \
+  --output web/public/assets/dinosaurs/trex_master.glb
+```
 
 After Blender exports an approved GLB, register it through the catalog CLI rather than hard-coding filenames in the scenario:
 
 ```bash
 python3 pipeline/register_asset.py dino_trex_master \
   --type dinosaur \
-  --blender-source blender/dinosaurs/trex_master.blend \
-  --export-path exports/dinosaurs/trex_master.glb \
-  --web-path /assets/trex_master.glb \
+  --blender-source blender/dinosaurs/trex/trex_master.blend \
+  --export-path web/public/assets/dinosaurs/trex_master.glb \
+  --web-path /assets/dinosaurs/trex_master.glb \
   --species tyrannosaurus_rex
 ```
 
@@ -111,7 +163,7 @@ The missing work is routed to specialized agents instead of sending every produc
 python3 -m unittest discover -s tests -v
 ```
 
-GitHub Actions validates the deterministic Python layer and builds the web runtime.
+GitHub Actions validates the deterministic Python layer and performs a strict TypeScript + Vite production build.
 
 ## Runtime contract
 
@@ -120,14 +172,15 @@ See:
 - `docs/THREEJS_EXECUTION_CONTRACT.md`
 - `docs/PRODUCTION_WORKFLOW.md`
 - `docs/ARCHITECTURE.md`
+- `docs/BLENDER_ASSET_CONTRACT.md`
 
 ## Astra bootstrap
 
-After cloning this branch on the workstation with Blender 5.2.1, give Astra the complete instructions in:
+After cloning this repository on the workstation with Blender 5.2.1, give Astra the complete instructions in:
 
 `ASTRA_BOOTSTRAP_PROMPT.md`
 
-Astra is expected to improve the existing Three.js factory rather than replace it: create reusable dinosaur/environment masters, rig/animate/export GLBs, wire animation playback, improve rainforest/weather/lighting, and visually iterate the first vertical slice.
+Astra should now focus primarily on visual factory-building: create and refine reusable dinosaur/environment masters, rigs, textures and missing animations, export/register GLBs, run the existing browser runtime, inspect captured shot previews and iterate visual quality. The deterministic engine/runtime should be extended only when an actual reusable capability is missing.
 
 ## IP policy
 
